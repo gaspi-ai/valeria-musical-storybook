@@ -12,7 +12,7 @@ import { AudioEngine } from '../audio/AudioEngine';
 import type { InstrumentType } from '../audio/AudioEngine';
 
 export interface ParentGateCallbacks {
-  onSceneChange: (scene: 'wheels' | 'musical_me') => void;
+  onSceneChange: (scene: string) => void;
   onAudioModeChange: (mode: 'song' | 'ensemble' | 'free') => void;
   onInstrumentChange: (inst: InstrumentType) => void;
 }
@@ -32,12 +32,12 @@ export class ParentGate {
 
   private holdStartTime: number = 0;
   private animFrameId: number = 0;
-  private holdDurationMs: number = 2500; // Normal: 2.5s; Infant lock: 5s
+  private holdDurationMs: number = 3000; // 3-second hold (5s in infant lock)
 
   private isInfantLockActive: boolean = false;
   private wakeLockSentinel: unknown = null;
 
-  private currentScene: 'wheels' | 'musical_me' = 'wheels';
+  private currentScene: string = 'wheels';
   private currentAudioMode: 'song' | 'ensemble' | 'free' = 'song';
   private currentInstrument: InstrumentType = 'marimba';
 
@@ -136,15 +136,33 @@ export class ParentGate {
             </div>
           </div>
 
-          <!-- Scene Selector -->
+          <!-- Scene Selector Carousel / Grid -->
           <div class="parent-section">
-            <label class="parent-label">Choose Storybook Scene:</label>
-            <div class="parent-btn-group">
+            <label class="parent-label">Choose Storybook Scene (6 Scenes):</label>
+            <div class="parent-btn-group scene-grid-6">
               <button class="scene-select-btn ${this.currentScene === 'wheels' ? 'active' : ''}" data-scene="wheels">
-                🚌 Wheels on the Bus
+                <span class="scene-btn-icon">🚌</span>
+                <span class="scene-btn-title">Wheels on the Bus</span>
               </button>
               <button class="scene-select-btn ${this.currentScene === 'musical_me' ? 'active' : ''}" data-scene="musical_me">
-                🌸 Musical Me Garden
+                <span class="scene-btn-icon">🌸</span>
+                <span class="scene-btn-title">Musical Me Garden</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'old_macdonald' ? 'active' : ''}" data-scene="old_macdonald">
+                <span class="scene-btn-icon">🚜</span>
+                <span class="scene-btn-title">Old MacDonald's Farm</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'itsy_bitsy' ? 'active' : ''}" data-scene="itsy_bitsy">
+                <span class="scene-btn-icon">🕷️</span>
+                <span class="scene-btn-title">Itsy Bitsy Spider</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'twinkle_star' ? 'active' : ''}" data-scene="twinkle_star">
+                <span class="scene-btn-icon">⭐</span>
+                <span class="scene-btn-title">Twinkle, Twinkle, Little Star</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'row_boat' ? 'active' : ''}" data-scene="row_boat">
+                <span class="scene-btn-icon">🛶</span>
+                <span class="scene-btn-title">Row, Row, Row Your Boat</span>
               </button>
             </div>
           </div>
@@ -165,21 +183,33 @@ export class ParentGate {
             </div>
           </div>
 
-          <!-- Musical Me Instrument Selector -->
+          <!-- Acoustic Instrument Selector -->
           <div class="parent-section">
-            <label class="parent-label">Acoustic Instrument:</label>
-            <div class="parent-btn-group">
+            <label class="parent-label">Acoustic Instrument Soundbank:</label>
+            <div class="parent-btn-group inst-grid">
               <button class="inst-select-btn ${this.currentInstrument === 'marimba' ? 'active' : ''}" data-inst="marimba">
                 🪵 Marimba
               </button>
               <button class="inst-select-btn ${this.currentInstrument === 'glock' ? 'active' : ''}" data-inst="glock">
                 🔔 Glockenspiel
               </button>
+              <button class="inst-select-btn ${this.currentInstrument === 'celesta' ? 'active' : ''}" data-inst="celesta">
+                ✨ Celesta
+              </button>
               <button class="inst-select-btn ${this.currentInstrument === 'piano' ? 'active' : ''}" data-inst="piano">
                 🎹 Grand Piano
               </button>
               <button class="inst-select-btn ${this.currentInstrument === 'musicbox' ? 'active' : ''}" data-inst="musicbox">
                 🎼 Music Box
+              </button>
+              <button class="inst-select-btn ${this.currentInstrument === 'harp' ? 'active' : ''}" data-inst="harp">
+                🪕 Orchestral Harp
+              </button>
+              <button class="inst-select-btn ${this.currentInstrument === 'banjo' ? 'active' : ''}" data-inst="banjo">
+                🪕 Banjo
+              </button>
+              <button class="inst-select-btn ${this.currentInstrument === 'nylon_guitar' ? 'active' : ''}" data-inst="nylon_guitar">
+                🎸 Nylon Guitar
               </button>
             </div>
           </div>
@@ -313,6 +343,30 @@ export class ParentGate {
     this.gateButton.addEventListener('pointercancel', cancelHold);
     this.gateButton.addEventListener('pointerleave', cancelHold);
 
+    // Simultaneous 2-Finger Tap Shortcut for Parents (Instant unlock)
+    this.gateButton.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length >= 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.cancelHold();
+        this.openModal();
+      }
+    }, { passive: false });
+
+    // Global 2-finger tap on top-right quadrant
+    window.addEventListener('touchstart', (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const cornerBoundary = window.innerWidth - 180;
+        if (t1.clientX > cornerBoundary && t1.clientY < 180 && t2.clientX > cornerBoundary && t2.clientY < 180) {
+          e.preventDefault();
+          this.cancelHold();
+          this.openModal();
+        }
+      }
+    }, { passive: false });
+
     // Quick Lock Button on Main Screen
     this.quickLockBtn.addEventListener('pointerdown', (e: PointerEvent) => {
       e.preventDefault();
@@ -355,7 +409,7 @@ export class ParentGate {
       btn.addEventListener('click', () => {
         sceneBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const scene = btn.getAttribute('data-scene') as 'wheels' | 'musical_me';
+        const scene = btn.getAttribute('data-scene') || 'wheels';
         this.currentScene = scene;
         this.callbacks.onSceneChange(scene);
         this.engine.playSound('chime.mp3', { volume: 0.6 });
@@ -525,7 +579,7 @@ export class ParentGate {
     this.guideModalOverlay.style.display = 'none';
   }
 
-  public setScene(scene: 'wheels' | 'musical_me'): void {
+  public setScene(scene: string): void {
     this.currentScene = scene;
     const sceneBtns = this.modalOverlay.querySelectorAll('.scene-select-btn');
     sceneBtns.forEach(btn => {

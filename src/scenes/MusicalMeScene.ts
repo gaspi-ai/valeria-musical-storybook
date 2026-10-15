@@ -12,6 +12,7 @@
 import { AudioEngine } from '../audio/AudioEngine';
 import type { InstrumentType } from '../audio/AudioEngine';
 import { TouchBurstManager } from '../components/TouchBurstManager';
+import type { StorybookScene } from './SceneManager';
 import confetti from 'canvas-confetti';
 
 interface SoundPad {
@@ -22,7 +23,13 @@ interface SoundPad {
   icon: string;
 }
 
-export class MusicalMeScene {
+export class MusicalMeScene implements StorybookScene {
+  public readonly id = 'musical_me';
+  public readonly title = 'Musical Me Garden';
+  public readonly subtitle = '7 Pentatonic Flower Bells';
+  public readonly icon = '🌸';
+  public readonly themeColor = '#4ECDC4';
+
   private container: HTMLElement;
   private bursts: TouchBurstManager;
   private engine: AudioEngine;

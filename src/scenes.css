@@ -1,0 +1,1550 @@
+/**
+ * scenes.css
+ * Rich Visual Styling for Toddler Musical Storybook Scenes 3, 4, 5, 6
+ * & 6-Scene Parent Carousel Grid.
+ */
+
+/* ==========================================================================
+   1. BASE STORYBOOK SCENE CONTAINER
+   ========================================================================== */
+.storybook-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* ==========================================================================
+   2. PARENT MODAL 6-SCENE GRID & INSTRUMENT GRID
+   ========================================================================== */
+.scene-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+@media (min-width: 540px) {
+  .scene-grid-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.scene-select-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: #F8FAFC;
+  border: 2px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  touch-action: manipulation;
+}
+
+.scene-select-btn:active {
+  transform: scale(0.96);
+}
+
+.scene-select-btn.active {
+  background: linear-gradient(135deg, #06D6A0, #059669);
+  color: #FFFFFF;
+  border-color: #047857;
+  box-shadow: 0 6px 18px rgba(6, 214, 160, 0.45);
+  transform: scale(1.02);
+}
+
+.scene-btn-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.scene-btn-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.inst-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .inst-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ==========================================================================
+   3. SCENE 3: OLD MACDONALD'S FARM (.scene-old-macdonald)
+   ========================================================================== */
+.scene-old-macdonald {
+  background: linear-gradient(180deg, #A0E4FF 0%, #D8F3DC 55%, #74C69D 100%);
+}
+
+.farm-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 45%;
+  pointer-events: none;
+}
+
+.farm-sun {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  left: calc(18px + var(--safe-left));
+  width: clamp(65px, 16vw, 85px);
+  height: clamp(65px, 16vw, 85px);
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFE066 30%, #FFD166 70%, #F4A261 100%);
+  box-shadow: 0 0 35px rgba(255, 209, 102, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.farm-sun .sun-face {
+  position: relative;
+  width: 60%;
+  height: 60%;
+}
+
+.farm-cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
+}
+
+.farm-cloud.cloud-1 {
+  top: 15%;
+  left: 28%;
+  width: 90px;
+  height: 38px;
+  animation: floatCloud 22s linear infinite alternate;
+}
+
+.farm-cloud.cloud-2 {
+  top: 8%;
+  right: 22%;
+  width: 110px;
+  height: 44px;
+  animation: floatCloud 28s linear infinite alternate-reverse;
+}
+
+/* Pastures & Hills */
+.farm-pastures {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 65%;
+  pointer-events: none;
+}
+
+.hill-back {
+  position: absolute;
+  bottom: 120px;
+  left: -20%;
+  width: 140%;
+  height: 220px;
+  border-radius: 60% 60% 0 0;
+  background: #52B788;
+  opacity: 0.75;
+}
+
+.hill-front {
+  position: absolute;
+  bottom: 0;
+  left: -10%;
+  width: 120%;
+  height: 200px;
+  border-radius: 50% 50% 0 0;
+  background: #40916C;
+}
+
+/* Big Red Barn */
+.farm-barn-wrap {
+  position: absolute;
+  top: calc(24% + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(140px, 36vw, 210px);
+  height: clamp(130px, 32vw, 190px);
+  z-index: 15;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.barn-roof {
+  position: relative;
+  width: 0;
+  height: 0;
+  margin: 0 auto;
+  border-left: clamp(75px, 19vw, 115px) solid transparent;
+  border-right: clamp(75px, 19vw, 115px) solid transparent;
+  border-bottom: clamp(45px, 11vw, 65px) solid #851818;
+}
+
+.barn-weathervane {
+  position: absolute;
+  top: -30px;
+  left: -12px;
+  font-size: 1.5rem;
+  animation: weathervaneWiggle 3s ease-in-out infinite alternate;
+}
+
+@keyframes weathervaneWiggle {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(12deg); }
+}
+
+.barn-body {
+  position: relative;
+  width: 100%;
+  height: clamp(80px, 20vw, 120px);
+  background: #B71C1C;
+  border: 4px solid #F8F9FA;
+  border-top: none;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.barn-loft-window {
+  position: absolute;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  background: #5D1010;
+  border: 2px solid #FFFFFF;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.barn-door-frame {
+  position: relative;
+  width: clamp(70px, 18vw, 100px);
+  height: clamp(60px, 15vw, 85px);
+  perspective: 600px;
+}
+
+.barn-inside {
+  position: absolute;
+  inset: 0;
+  background: #3E1010;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.barn-animal-peek {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.peek-emoji {
+  font-size: 2.2rem;
+}
+
+.peek-label {
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #FFE066;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.barn-animal-peek.bounce-peek {
+  animation: animalBouncePeek 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes animalBouncePeek {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.barn-door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: #A31B1B;
+  border: 3px solid #FFFFFF;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.barn-door.door-left {
+  left: 0;
+  transform-origin: left center;
+}
+
+.barn-door.door-right {
+  right: 0;
+  transform-origin: right center;
+}
+
+.barn-door.open.door-left {
+  transform: rotateY(-110deg);
+}
+
+.barn-door.open.door-right {
+  transform: rotateY(110deg);
+}
+
+.barn-tap-hint {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  color: #B71C1C;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Farm Animals */
+.field-animal {
+  position: absolute;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.field-animal:active {
+  transform: scale(0.88, 1.15);
+}
+
+.animal-name-badge {
+  background: rgba(255, 255, 255, 0.92);
+  color: #1F2937;
+  font-size: clamp(0.6rem, 1.8vw, 0.72rem);
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-top: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  pointer-events: none;
+}
+
+/* Cow */
+.cow-wrap {
+  bottom: calc(90px + var(--safe-bottom));
+  left: 8%;
+  font-size: 1.5rem;
+}
+
+.cow-body {
+  width: clamp(75px, 20vw, 110px);
+  height: clamp(55px, 15vw, 80px);
+  background: #FFFFFF;
+  border: 4px solid #2B2D42;
+  border-radius: 30px;
+  position: relative;
+}
+
+.cow-spot {
+  position: absolute;
+  background: #2B2D42;
+  border-radius: 50%;
+}
+.spot-1 { width: 28px; height: 22px; top: 12px; left: 16px; }
+.spot-2 { width: 34px; height: 26px; top: 20px; right: 18px; }
+
+.cow-head {
+  position: absolute;
+  left: -22px;
+  top: -12px;
+  width: 44px;
+  height: 42px;
+  background: #FFFFFF;
+  border: 3px solid #2B2D42;
+  border-radius: 50% 50% 40% 40%;
+}
+
+.cow-ears .ear {
+  position: absolute;
+  width: 14px;
+  height: 8px;
+  background: #2B2D42;
+  border-radius: 50%;
+  top: 4px;
+  transition: transform 0.3s;
+}
+.ear-left { left: -8px; transform: rotate(-25deg); }
+.ear-right { right: -8px; transform: rotate(25deg); }
+
+.cow-horns .horn {
+  position: absolute;
+  width: 8px;
+  height: 10px;
+  background: #FFD166;
+  border-radius: 4px 4px 0 0;
+  top: -8px;
+}
+.horn.left { left: 8px; }
+.horn.right { right: 8px; }
+
+.cow-snout {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 16px;
+  background: #FFB4A2;
+  border-radius: 12px;
+  border: 2px solid #2B2D42;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 4px;
+}
+.cow-snout .nostril { width: 4px; height: 4px; background: #2B2D42; border-radius: 50%; }
+
+.cow-bell {
+  position: absolute;
+  left: -6px;
+  bottom: 4px;
+  font-size: 1.1rem;
+}
+
+.cow-legs .leg {
+  position: absolute;
+  width: 8px;
+  height: 18px;
+  background: #2B2D42;
+  bottom: -16px;
+  border-radius: 0 0 4px 4px;
+}
+.cow-legs .leg:nth-child(1) { left: 12px; }
+.cow-legs .leg:nth-child(2) { left: 28px; }
+.cow-legs .leg:nth-child(3) { right: 28px; }
+.cow-legs .leg:nth-child(4) { right: 12px; }
+
+.cow-moo-anim {
+  animation: cowMoo 1.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes cowMoo {
+  0% { transform: scale(1); }
+  25% { transform: scale(0.9, 1.15) rotate(-4deg); }
+  50% { transform: scale(1.15, 0.9) rotate(3deg); }
+  75% { transform: scale(0.95, 1.05) rotate(-2deg); }
+  100% { transform: scale(1); }
+}
+
+/* Sheep */
+.sheep-wrap {
+  bottom: calc(180px + var(--safe-bottom));
+  left: 26%;
+}
+
+.sheep-body {
+  position: relative;
+  width: clamp(65px, 18vw, 90px);
+  height: clamp(50px, 14vw, 70px);
+}
+
+.sheep-wool-puff {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #FFFFFF;
+  border: 4px solid #D8D8D8;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.sheep-head {
+  position: absolute;
+  left: -14px;
+  top: 8px;
+  width: 28px;
+  height: 32px;
+  background: #2B2D42;
+  border-radius: 14px;
+}
+
+.sheep-legs .s-leg {
+  position: absolute;
+  width: 6px;
+  height: 14px;
+  background: #2B2D42;
+  bottom: -12px;
+  border-radius: 0 0 3px 3px;
+}
+.sheep-legs .s-leg:nth-child(1) { left: 14px; }
+.sheep-legs .s-leg:nth-child(2) { left: 26px; }
+.sheep-legs .s-leg:nth-child(3) { right: 26px; }
+.sheep-legs .s-leg:nth-child(4) { right: 14px; }
+
+.sheep-bounce-anim {
+  animation: sheepBounce 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes sheepBounce {
+  0% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-35px) scale(1.15, 0.85); }
+  70% { transform: translateY(6px) scale(0.85, 1.15); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Mud Puddle & Pig */
+.mud-puddle-zone {
+  position: absolute;
+  bottom: calc(75px + var(--safe-bottom));
+  left: 42%;
+  z-index: 22;
+}
+
+.mud-puddle {
+  position: relative;
+  width: clamp(100px, 24vw, 140px);
+  height: clamp(45px, 12vw, 65px);
+  background: #7F4F24;
+  border-radius: 50%;
+  border: 4px solid #582F0E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+.pig-wrap {
+  position: relative;
+}
+
+.pig-body {
+  width: clamp(55px, 14vw, 75px);
+  height: clamp(42px, 11vw, 55px);
+  background: #FFAFCC;
+  border: 3px solid #FF8FAB;
+  border-radius: 50%;
+  position: relative;
+}
+
+.pig-head {
+  position: absolute;
+  left: -12px;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  background: #FFAFCC;
+  border: 3px solid #FF8FAB;
+  border-radius: 50%;
+}
+
+.pig-snout {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 14px;
+  height: 10px;
+  background: #FF8FAB;
+  border-radius: 8px;
+}
+
+.pig-mud-roll {
+  animation: pigRoll 1.0s ease-in-out;
+}
+@keyframes pigRoll {
+  0% { transform: rotate(0deg); }
+  30% { transform: rotate(-25deg) scale(0.9, 1.1); }
+  60% { transform: rotate(25deg) scale(1.1, 0.9); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Duck Pond & Duck */
+.duck-pond-zone {
+  position: absolute;
+  bottom: calc(75px + var(--safe-bottom));
+  right: 18%;
+  z-index: 22;
+}
+
+.duck-pond {
+  position: relative;
+  width: clamp(110px, 26vw, 150px);
+  height: clamp(55px, 13vw, 75px);
+  background: #48CAE4;
+  border-radius: 50%;
+  border: 4px solid #0096C7;
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pond-reeds {
+  position: absolute;
+  right: -8px;
+  top: -12px;
+  font-size: 1.2rem;
+}
+
+.duck-wrap {
+  position: relative;
+}
+
+.duck-body {
+  width: clamp(45px, 12vw, 60px);
+  height: clamp(35px, 9vw, 45px);
+  background: #FFD166;
+  border: 3px solid #E76F51;
+  border-radius: 50% 50% 40% 40%;
+  position: relative;
+}
+
+.duck-head {
+  position: absolute;
+  right: -8px;
+  top: -6px;
+  width: 24px;
+  height: 24px;
+  background: #FFD166;
+  border-radius: 50%;
+}
+
+.duck-bill {
+  position: absolute;
+  right: -6px;
+  top: 4px;
+  font-size: 0.9rem;
+}
+
+.duck-paddle-anim {
+  animation: duckPaddle 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes duckPaddle {
+  0% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-16px) rotate(-10deg); }
+  70% { transform: translateY(4px) rotate(8deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* Vintage Green Farm Tractor */
+.farm-tractor-wrap {
+  position: absolute;
+  bottom: calc(85px + var(--safe-bottom));
+  right: 3%;
+  z-index: 25;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tractor-body {
+  position: relative;
+  width: clamp(80px, 20vw, 115px);
+  height: clamp(55px, 14vw, 75px);
+}
+
+.tractor-hood {
+  position: absolute;
+  left: 0;
+  bottom: 12px;
+  width: 50%;
+  height: 38px;
+  background: #2D6A4F;
+  border: 3px solid #1B4332;
+  border-radius: 12px 4px 4px 4px;
+}
+
+.tractor-cabin {
+  position: absolute;
+  right: 12px;
+  bottom: 24px;
+  width: 38%;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 3px solid #1B4332;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tractor-exhaust {
+  position: absolute;
+  left: 14px;
+  top: 0;
+  width: 8px;
+  height: 22px;
+  background: #4A5568;
+  border-radius: 4px 4px 0 0;
+}
+
+.tractor-wheel {
+  position: absolute;
+  background: #1A202C;
+  border-radius: 50%;
+  border: 3px solid #FFD166;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wheel-front {
+  left: 4px;
+  bottom: -4px;
+  width: 24px;
+  height: 24px;
+}
+.wheel-back {
+  right: 8px;
+  bottom: -8px;
+  width: 36px;
+  height: 36px;
+}
+
+.tractor-chugging {
+  animation: tractorVibe 0.28s infinite alternate ease-in-out;
+}
+@keyframes tractorVibe {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px) rotate(1deg); }
+}
+
+/* Farm Toddler Quick Buttons Bar */
+.farm-toddler-bar,
+.spider-toddler-bar,
+.twinkle-toddler-bar,
+.river-toddler-bar {
+  position: absolute;
+  bottom: calc(10px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  padding: 6px 14px;
+  border-radius: 40px;
+  border: 3px solid #E2E8F0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  z-index: 60;
+  pointer-events: auto;
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+}
+
+.farm-quick-btn,
+.spider-quick-btn,
+.twinkle-quick-btn,
+.river-quick-btn {
+  padding: 6px 14px;
+  border-radius: 30px;
+  border: 2px solid transparent;
+  background: #F1F5F9;
+  font-family: inherit;
+  font-size: clamp(0.72rem, 2.4vw, 0.85rem);
+  font-weight: 800;
+  color: #1E293B;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  touch-action: manipulation;
+}
+
+.farm-quick-btn:active,
+.spider-quick-btn:active,
+.twinkle-quick-btn:active,
+.river-quick-btn:active {
+  transform: scale(0.92);
+}
+
+.farm-quick-btn.btn-cow { background: #E2FDCB; color: #2D6A4F; border-color: #74C69D; }
+.farm-quick-btn.btn-sheep { background: #FFF3CD; color: #856404; border-color: #FFE69C; }
+.farm-quick-btn.btn-pig { background: #FCE8E6; color: #A51D24; border-color: #F8B4B4; }
+.farm-quick-btn.btn-duck { background: #D1E7DD; color: #0F5132; border-color: #BADBCC; }
+.farm-quick-btn.btn-tractor { background: #E0F2FE; color: #0369A1; border-color: #BAE6FD; }
+
+/* ==========================================================================
+   4. SCENE 4: ITSY BITSY SPIDER (.scene-itsy-bitsy)
+   ========================================================================== */
+.scene-itsy-bitsy {
+  background: #EAE2B7;
+}
+
+.garden-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 48%;
+  transition: background 0.8s ease;
+  pointer-events: none;
+}
+
+.garden-sky.sunny {
+  background: linear-gradient(180deg, #90E0EF 0%, #CAF0F8 60%, #FDF0D5 100%);
+}
+
+.garden-sky.rainy {
+  background: linear-gradient(180deg, #4A5568 0%, #718096 60%, #A0AEC0 100%);
+}
+
+.garden-sun {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  right: calc(20px + var(--safe-right));
+  width: clamp(70px, 18vw, 95px);
+  height: clamp(70px, 18vw, 95px);
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFE066 30%, #FFD166 70%, #F4A261 100%);
+  box-shadow: 0 0 35px rgba(255, 209, 102, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 10;
+  transition: transform 0.4s ease, opacity 0.5s ease;
+}
+
+.garden-sky.rainy .garden-sun {
+  opacity: 0.35;
+  transform: scale(0.85);
+}
+
+.sun-shine-big {
+  animation: sunShine 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes sunShine {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3) rotate(20deg); }
+  100% { transform: scale(1); }
+}
+
+/* Rain Cloud */
+.garden-cloud {
+  position: absolute;
+  top: calc(20px + var(--safe-top));
+  left: 12%;
+  width: clamp(110px, 26vw, 160px);
+  height: clamp(60px, 14vw, 85px);
+  background: #FFFFFF;
+  border-radius: 40px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 15;
+  transition: all 0.5s ease;
+}
+
+.garden-sky.rainy .garden-cloud {
+  background: #CBD5E1;
+  box-shadow: 0 8px 25px rgba(71, 85, 105, 0.35);
+}
+
+.cloud-tap-hint {
+  position: absolute;
+  bottom: -22px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0284C7;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.cloud-shaking {
+  animation: cloudShake 0.4s infinite alternate ease-in-out;
+}
+@keyframes cloudShake {
+  0% { transform: translateX(-4px); }
+  100% { transform: translateX(4px); }
+}
+
+.rain-drops-container {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 140px;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.rain-drop-item {
+  position: absolute;
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(180deg, #38BDF8, #0284C7);
+  border-radius: 4px;
+  animation: fallRain 0.6s linear infinite;
+}
+@keyframes fallRain {
+  0% { transform: translateY(-10px); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateY(140px); opacity: 0; }
+}
+
+/* Brick Wall & Waterspout */
+.brick-wall-bg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60%;
+  background: #C85A32;
+  box-shadow: inset 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.brick-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.15) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255,255,255,0.15) 2px, transparent 2px);
+  background-size: 45px 22px;
+}
+
+.ivy-vines {
+  position: absolute;
+  top: 0;
+  font-size: 1.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+.ivy-vines.left { left: 8px; }
+.ivy-vines.right { right: 8px; }
+
+/* Vintage Copper Waterspout */
+.waterspout-wrap {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(75px, 20vw, 110px);
+  height: calc(100% + 40px);
+  z-index: 15;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.spout-gutter-funnel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 38px;
+  background: linear-gradient(180deg, #B87333, #8C481A);
+  border-radius: 6px 6px 18px 18px;
+  border: 3px solid #6E350E;
+}
+
+.spout-pipe {
+  position: absolute;
+  top: 36px;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52%;
+  background: linear-gradient(90deg, #8C481A 0%, #D4894E 35%, #8C481A 100%);
+  border-left: 3px solid #6E350E;
+  border-right: 3px solid #6E350E;
+  overflow: hidden;
+}
+
+.spout-water-stream {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, #38BDF8, #0284C7);
+  opacity: 0.85;
+  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.spout-water-stream.water-cascading {
+  height: 100%;
+}
+
+.spout-elbow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 75%;
+  height: 44px;
+  background: linear-gradient(180deg, #8C481A, #B87333);
+  border-radius: 0 0 25px 25px;
+  border: 3px solid #6E350E;
+}
+
+/* Cute Climbing Spider */
+.itsy-spider {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8%;
+  width: clamp(52px, 14vw, 70px);
+  height: clamp(48px, 13vw, 65px);
+  z-index: 25;
+  cursor: pointer;
+  transition: bottom 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.spider-body {
+  width: 100%;
+  height: 100%;
+  background: #2B2D42;
+  border-radius: 50%;
+  position: relative;
+  border: 3px solid #1E293B;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spider-eyes {
+  display: flex;
+  gap: 6px;
+}
+
+.s-eye {
+  width: 14px;
+  height: 14px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.s-eye .pupil {
+  width: 6px;
+  height: 6px;
+  background: #000000;
+  border-radius: 50%;
+}
+
+.spider-cheeks {
+  display: flex;
+  gap: 22px;
+  margin-top: 2px;
+}
+.spider-cheeks .cheek {
+  width: 6px;
+  height: 4px;
+  background: #FF6B6B;
+  border-radius: 50%;
+}
+
+.spider-smile {
+  width: 12px;
+  height: 6px;
+  border-bottom: 2px solid #FFFFFF;
+  border-radius: 0 0 8px 8px;
+}
+
+.spider-legs .leg {
+  position: absolute;
+  width: 16px;
+  height: 4px;
+  background: #2B2D42;
+  border-radius: 4px;
+}
+.spider-legs.left { left: -14px; top: 12px; }
+.spider-legs.right { right: -14px; top: 12px; }
+
+.spider-step-bounce {
+  animation: spiderStep 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes spiderStep {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.2, 0.8) translateY(-6px); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+.spider-washed-down {
+  animation: spiderWash 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes spiderWash {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  30% { transform: translateX(-50%) rotate(180deg) scale(0.85); }
+  60% { transform: translateX(-50%) rotate(360deg) scale(1.1); }
+  100% { transform: translateX(-50%) rotate(0deg) scale(1); }
+}
+
+.spider-wiggle-dry {
+  animation: spiderWiggle 0.8s ease-in-out;
+}
+@keyframes spiderWiggle {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-15deg); }
+  75% { transform: translateX(-50%) rotate(15deg); }
+}
+
+/* Flower Bed at Bottom */
+.garden-flowerbed {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 65px;
+  background: #582F0E;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.flowers-row {
+  display: flex;
+  gap: clamp(12px, 5vw, 32px);
+  font-size: 1.8rem;
+}
+
+.garden-flower.flower-bounce {
+  animation: flowerBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes flowerBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35) translateY(-8px); }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   5. SCENE 5: TWINKLE, TWINKLE, LITTLE STAR (.scene-twinkle-star)
+   ========================================================================== */
+.scene-twinkle-star {
+  background: radial-gradient(circle at 50% 30%, #1A1440 0%, #0B0826 70%, #050414 100%);
+}
+
+.night-sky-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.night-glow-ambient {
+  position: absolute;
+  top: 10%;
+  left: 20%;
+  width: 60%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(157, 78, 221, 0.22) 0%, transparent 70%);
+  filter: blur(40px);
+}
+
+.night-cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50px;
+  box-shadow: 0 0 30px rgba(157, 78, 221, 0.15);
+}
+.night-cloud.cloud-l { top: 18%; left: -5%; width: 140px; height: 50px; }
+.night-cloud.cloud-r { top: 25%; right: -5%; width: 160px; height: 55px; }
+
+.constellation-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Sleeping Moon */
+.sleeping-moon-wrap {
+  position: absolute;
+  top: calc(18px + var(--safe-top));
+  right: calc(18px + var(--safe-right));
+  width: clamp(75px, 20vw, 100px);
+  height: clamp(75px, 20vw, 100px);
+  z-index: 15;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.moon-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: -15px 12px 0 0 #FFE066;
+  filter: drop-shadow(0 0 20px rgba(255, 224, 102, 0.65));
+}
+
+.moon-face {
+  position: absolute;
+  left: 20%;
+  top: 35%;
+}
+
+.moon-sleep-eye {
+  display: inline-block;
+  width: 8px;
+  height: 4px;
+  border-bottom: 2px solid #582F0E;
+  border-radius: 0 0 8px 8px;
+  margin: 0 2px;
+}
+
+.moon-sleep-mouth {
+  display: block;
+  width: 6px;
+  height: 4px;
+  border-bottom: 2px solid #582F0E;
+  border-radius: 0 0 6px 6px;
+  margin-left: 8px;
+}
+
+.moon-nightcap {
+  position: absolute;
+  top: -16px;
+  right: 12px;
+  font-size: 1.6rem;
+}
+
+.moon-zzz-container {
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  pointer-events: auto;
+}
+
+.zzz-bubble {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  color: #7209B7;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 20px;
+  cursor: pointer;
+  animation: floatZzz 3.8s ease-out forwards;
+  box-shadow: 0 2px 8px rgba(114, 9, 183, 0.4);
+}
+@keyframes floatZzz {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  20% { opacity: 1; transform: scale(1); }
+  100% { transform: translate(-40px, -70px) scale(1.3); opacity: 0; }
+}
+
+.moon-smile-bounce {
+  animation: moonSmile 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes moonSmile {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18) rotate(-6deg); }
+  100% { transform: scale(1); }
+}
+
+.moon-tap-hint {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  color: #7209B7;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* Pentatonic Stars */
+.stars-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.interactive-star {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.star-shape {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.8));
+}
+
+.star-sparkle-center {
+  position: absolute;
+  font-size: 1.1rem;
+}
+
+.star-halo {
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 224, 102, 0.5) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.interactive-star.star-illuminated {
+  transform: translate(-50%, -50%) scale(1.35);
+}
+.interactive-star.star-illuminated .star-halo {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   6. SCENE 6: ROW, ROW, ROW YOUR BOAT (.scene-row-boat)
+   ========================================================================== */
+.scene-row-boat {
+  background: linear-gradient(180deg, #CAF0F8 0%, #90E0EF 45%, #0077B6 100%);
+}
+
+.river-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  pointer-events: none;
+}
+
+.river-sun {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFE066 30%, #FFD166 70%, #F4A261 100%);
+  box-shadow: 0 0 30px rgba(255, 209, 102, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weeping-willow {
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  font-size: 2.2rem;
+  display: flex;
+  flex-direction: column;
+}
+.weeping-willow.left { left: 4px; }
+.weeping-willow.right { right: 4px; }
+
+/* River Water & Ripple Canvas */
+.river-water-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 65%;
+  background: linear-gradient(180deg, #0096C7 0%, #0077B6 40%, #03045E 100%);
+  overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.river-ripple-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Floating Water Lilies */
+.water-lily {
+  position: absolute;
+  z-index: 12;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.lily-1 { left: 14%; top: 25%; }
+.lily-2 { left: 32%; top: 60%; }
+.lily-3 { right: 18%; top: 40%; }
+
+.lily-pad {
+  width: clamp(55px, 14vw, 75px);
+  height: clamp(38px, 10vw, 52px);
+  background: #52B788;
+  border: 3px solid #2D6A4F;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.lily-bloom {
+  font-size: 1.5rem;
+}
+
+.water-lily.lily-dip {
+  animation: lilyDip 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes lilyDip {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(12px) scale(0.9); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Jumping Fish */
+.jumping-fish {
+  position: absolute;
+  bottom: 30%;
+  left: 35%;
+  font-size: 2.2rem;
+  z-index: 22;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.jumping-fish.fish-leaping {
+  animation: fishLeap 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+@keyframes fishLeap {
+  0% { transform: translateY(30px) rotate(-35deg); opacity: 0; }
+  20% { opacity: 1; }
+  50% { transform: translateY(-75px) rotate(15deg); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(30px) rotate(65deg); opacity: 0; }
+}
+
+/* Wooden Rowboat */
+.rowboat-wrap {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(140px, 38vw, 210px);
+  height: clamp(80px, 22vw, 120px);
+  z-index: 20;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.boat-hull {
+  position: relative;
+  width: 100%;
+  height: 60%;
+  background: linear-gradient(180deg, #9C6644, #7F4F24);
+  border: 4px solid #582F0E;
+  border-radius: 10px 10px 50px 50px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boat-passengers {
+  display: flex;
+  gap: 12px;
+  font-size: 1.8rem;
+  margin-top: -24px;
+}
+
+.oar {
+  position: absolute;
+  top: 15px;
+  width: 8px;
+  height: 48px;
+  background: #DDA15E;
+  border: 2px solid #BC6C25;
+  border-radius: 4px;
+  transition: transform 0.35s ease;
+}
+.oar-left {
+  left: -16px;
+  transform-origin: top center;
+  transform: rotate(35deg);
+}
+.oar-right {
+  right: -16px;
+  transform-origin: top center;
+  transform: rotate(-35deg);
+}
+
+.oar-left.oar-stroke {
+  transform: rotate(65deg) scaleY(1.1);
+}
+.oar-right.oar-stroke {
+  transform: rotate(-65deg) scaleY(1.1);
+}
+
+.boat-tap-hint {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0077B6;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}

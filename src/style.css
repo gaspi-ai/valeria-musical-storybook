@@ -5,6 +5,7 @@
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
+@import './scenes.css';
 
 :root {
   --color-bus-yellow: #FFBD00;

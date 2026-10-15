@@ -15,8 +15,15 @@
 import { AudioEngine } from '../audio/AudioEngine';
 import { AcousticEnsemble } from '../audio/AcousticEnsemble';
 import { TouchBurstManager } from '../components/TouchBurstManager';
+import type { StorybookScene } from './SceneManager';
 
-export class WheelsScene {
+export class WheelsScene implements StorybookScene {
+  public readonly id = 'wheels';
+  public readonly title = 'Wheels on the Bus';
+  public readonly subtitle = 'Interactive School Bus';
+  public readonly icon = '🚌';
+  public readonly themeColor = '#FFD166';
+
   private container: HTMLElement;
   private bursts: TouchBurstManager;
   private engine: AudioEngine;
@@ -67,6 +74,9 @@ export class WheelsScene {
   public activate(): void {
     this.element.style.display = 'block';
     this.engine.startEngineRumble();
+    if (!this.wheelAnimId) {
+      this.startWheelPhysics();
+    }
 
     // Subscribe to downbeat visual bounce
     this.unsubscribeBeat = this.engine.onBeat((beatNum) => {
