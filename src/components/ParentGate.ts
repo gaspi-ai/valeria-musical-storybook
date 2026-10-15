@@ -377,8 +377,20 @@ export class ParentGate {
     // Modal UI Handlers
     const closeBtn = this.modalOverlay.querySelector('.parent-close-btn') as HTMLElement;
     const resumeBtn = this.modalOverlay.querySelector('.parent-resume-btn') as HTMLElement;
+    
+    const handleSaveAndResume = (e?: Event) => {
+      if (e && e.cancelable) e.preventDefault();
+      this.closeModal();
+      this.engine.playSound('chime.mp3', { volume: 0.7 });
+      this.showToast('✨ Settings Saved! ✨');
+    };
+    resumeBtn.addEventListener('click', handleSaveAndResume);
+    resumeBtn.addEventListener('touchend', handleSaveAndResume);
     closeBtn.addEventListener('click', () => this.closeModal());
-    resumeBtn.addEventListener('click', () => this.closeModal());
+    closeBtn.addEventListener('touchend', (e) => {
+      if (e && e.cancelable) e.preventDefault();
+      this.closeModal();
+    });
 
     // Toggle Infant Lock inside modal
     const modalLockBtn = this.modalOverlay.querySelector('#btn-toggle-infant-lock') as HTMLElement;
@@ -397,23 +409,34 @@ export class ParentGate {
     const guideCloseBtn = this.guideModalOverlay.querySelector('.guide-close-btn') as HTMLElement;
     const guideDoneBtn = this.guideModalOverlay.querySelector('.guide-done-btn') as HTMLElement;
     guideCloseBtn.addEventListener('click', () => this.closeGuideModal());
-    guideDoneBtn.addEventListener('click', () => {
+    guideCloseBtn.addEventListener('touchend', (e) => {
+      if (e && e.cancelable) e.preventDefault();
+      this.closeGuideModal();
+    });
+
+    const handleGuideDone = (e?: Event) => {
+      if (e && e.cancelable) e.preventDefault();
       this.closeGuideModal();
       this.closeModal();
       this.showToast('🔒 Triple-click Side Button on iPhone for Total Lock!');
-    });
+    };
+    guideDoneBtn.addEventListener('click', handleGuideDone);
+    guideDoneBtn.addEventListener('touchend', handleGuideDone);
 
     // Scene Switch buttons
     const sceneBtns = this.modalOverlay.querySelectorAll('.scene-select-btn');
     sceneBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
+      const handleSelectScene = (e?: Event) => {
+        if (e && e.cancelable && e.type === 'touchend') e.preventDefault();
         sceneBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const scene = btn.getAttribute('data-scene') || 'wheels';
         this.currentScene = scene;
         this.callbacks.onSceneChange(scene);
         this.engine.playSound('chime.mp3', { volume: 0.6 });
-      });
+      };
+      btn.addEventListener('click', handleSelectScene);
+      btn.addEventListener('touchend', handleSelectScene);
     });
 
     // Audio Mode buttons

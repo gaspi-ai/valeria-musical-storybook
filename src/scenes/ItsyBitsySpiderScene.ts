@@ -60,9 +60,9 @@ export class ItsyBitsySpiderScene implements StorybookScene {
 
     this.element.innerHTML = `
       <!-- Dynamic Sky (Sunny to Rainy gradient) -->
-      <div class="garden-sky sunny" id="garden-sky">
+      <div class="spider-sky sunny" id="spider-sky">
         <!-- Smiling Sun -->
-        <div class="garden-sun sun-pulse" id="garden-sun" role="button" aria-label="Sun">
+        <div class="spider-sun sun-pulse" id="spider-sun" role="button" aria-label="Sun">
           <div class="sun-face">
             <span class="sun-eye l"></span>
             <span class="sun-eye r"></span>
@@ -72,7 +72,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
         </div>
 
         <!-- Rain Cloud -->
-        <div class="garden-cloud" id="garden-cloud" role="button" aria-label="Rain Cloud">
+        <div class="spider-cloud" id="spider-cloud" role="button" aria-label="Rain Cloud">
           <div class="cloud-puffs">
             <span class="puff p1"></span>
             <span class="puff p2"></span>
@@ -161,15 +161,15 @@ export class ItsyBitsySpiderScene implements StorybookScene {
       </div>
 
       <!-- Flower Bed & Garden Soil at Bottom -->
-      <div class="garden-flowerbed" id="garden-flowerbed">
+      <div class="spider-flowerbed" id="spider-flowerbed">
         <div class="soil-ground"></div>
         <div class="flowers-row">
-          <div class="garden-flower f1">🌸</div>
-          <div class="garden-flower f2">🌼</div>
-          <div class="garden-flower f3">🌷</div>
-          <div class="garden-flower f4">🌻</div>
-          <div class="garden-flower f5">🌺</div>
-          <div class="garden-flower f6">🌸</div>
+          <div class="spider-flower f1">🌸</div>
+          <div class="spider-flower f2">🌼</div>
+          <div class="spider-flower f3">🌷</div>
+          <div class="spider-flower f4">🌻</div>
+          <div class="spider-flower f5">🌺</div>
+          <div class="spider-flower f6">🌸</div>
         </div>
       </div>
 
@@ -185,10 +185,10 @@ export class ItsyBitsySpiderScene implements StorybookScene {
 
     this.spiderEl = this.element.querySelector('#itsy-spider') as HTMLElement;
     this.spoutWaterEl = this.element.querySelector('#spout-water') as HTMLElement;
-    this.cloudEl = this.element.querySelector('#garden-cloud') as HTMLElement;
-    this.sunEl = this.element.querySelector('#garden-sun') as HTMLElement;
-    this.skyEl = this.element.querySelector('#garden-sky') as HTMLElement;
-    this.flowerBedEl = this.element.querySelector('#garden-flowerbed') as HTMLElement;
+    this.cloudEl = this.element.querySelector('#spider-cloud') as HTMLElement;
+    this.sunEl = this.element.querySelector('#spider-sun') as HTMLElement;
+    this.skyEl = this.element.querySelector('#spider-sky') as HTMLElement;
+    this.flowerBedEl = this.element.querySelector('#spider-flowerbed') as HTMLElement;
 
     this.updateSpiderPosition(false);
   }
@@ -204,7 +204,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     spoutWrap.addEventListener('pointerdown', (e: PointerEvent) => {
       // If not clicking rain or sun, climb!
       const target = e.target as HTMLElement;
-      if (!target.closest('#garden-cloud') && !target.closest('#garden-sun')) {
+      if (!target.closest('#spider-cloud') && !target.closest('#spider-sun')) {
         this.climbStep(e.clientX, e.clientY);
       }
     });
@@ -226,7 +226,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
       e.stopPropagation();
       this.engine.playSound('woodblock.mp3', { volume: 0.7, pitch: 1.2 });
       this.bursts.spawnBurst(e.clientX, e.clientY, 8, '#FF6B6B');
-      const flowers = this.flowerBedEl.querySelectorAll('.garden-flower');
+      const flowers = this.flowerBedEl.querySelectorAll('.spider-flower');
       flowers.forEach(f => {
         f.classList.add('flower-bounce');
         setTimeout(() => f.classList.remove('flower-bounce'), 600);

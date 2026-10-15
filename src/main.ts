@@ -138,10 +138,16 @@ class ToddlerStorybookApp {
     // Prevent right-click context menu
     window.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
+    // Helper to check if any settings or guide modal is open
+    const isModalOpen = (): boolean => {
+      const active = document.querySelector('.parent-modal-overlay:not([style*="display: none"])');
+      return !!active;
+    };
+
     // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal
     window.addEventListener('touchstart', (e) => {
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('.parent-modal-card, .parent-modal-body, .parent-modal-overlay')) {
+      if (isModalOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap'))) {
         return; // Allow touch in modal
       }
       if (e.touches.length > 1) {
@@ -153,8 +159,8 @@ class ToddlerStorybookApp {
     window.addEventListener('touchmove', (e) => {
       // Allow native finger scrolling inside the parent modal
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('.parent-modal-card, .parent-modal-body, .parent-modal-overlay')) {
-        return;
+      if (isModalOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap'))) {
+        return; // Allow native finger scrolling
       }
       // Prevent pull-to-refresh and window bouncing on toddler storybook screen
       e.preventDefault();
