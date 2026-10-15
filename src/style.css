@@ -194,10 +194,61 @@ html, body {
 /* --------------------------------------------------------------------------
    3. PARENT GATE & SCROLLABLE SETTINGS MODAL
    -------------------------------------------------------------------------- */
-.parent-gate-btn {
+.parent-controls-wrap {
   position: absolute;
   top: calc(10px + var(--safe-top));
   right: calc(12px + var(--safe-right));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 800;
+  transition: opacity 0.5s ease-out;
+}
+
+/* Ghost mode when Infant Lock is active: 18% opacity so baby doesn't see it */
+.parent-controls-wrap.infant-locked {
+  opacity: 0.2;
+}
+
+.parent-controls-wrap.infant-locked:active,
+.parent-controls-wrap.infant-locked .parent-gate-btn.holding {
+  opacity: 0.95;
+}
+
+.quick-infant-lock-btn {
+  width: clamp(44px, 10vw, 50px);
+  height: clamp(44px, 10vw, 50px);
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 3px solid #FF5400;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  touch-action: manipulation;
+}
+
+.quick-infant-lock-btn:active {
+  transform: scale(0.92);
+  background: #FFF3C4;
+}
+
+.quick-lock-icon {
+  font-size: 1.05rem;
+}
+
+.quick-lock-label {
+  font-size: 0.46rem;
+  font-weight: 900;
+  color: #FF5400;
+  margin-top: -2px;
+}
+
+.parent-gate-btn {
+  position: relative;
   width: clamp(46px, 11vw, 54px);
   height: clamp(46px, 11vw, 54px);
   border-radius: 50%;
@@ -207,8 +258,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 800;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .gate-ring-svg {
@@ -254,6 +305,33 @@ html, body {
 .parent-gate-btn.holding {
   transform: scale(0.94);
   background: #FFF3C4;
+}
+
+/* Toast Notification Banner */
+.storybook-toast {
+  position: absolute;
+  top: calc(75px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(29, 53, 87, 0.95);
+  color: #FFFFFF;
+  border: 2px solid #FFD166;
+  padding: 10px 18px;
+  border-radius: 30px;
+  font-size: clamp(0.78rem, 2.6vw, 0.9rem);
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 1500;
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 90vw;
+}
+
+.storybook-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Parent Modal Overlay - Fully Scrollable & Touch-Friendly */
@@ -404,15 +482,204 @@ html, body {
   touch-action: manipulation;
 }
 
-.parent-tip-card {
-  background: #EFF6FF;
-  border-left: 4px solid #3B82F6;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 0.8rem;
+/* Infant Anti-Exit Lock Card */
+.parent-lock-feature-card {
+  background: linear-gradient(135deg, #FFF3C4 0%, #FFE8D6 100%);
+  border: 2.5px solid #FFBD00;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lock-feature-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lock-feature-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.lock-feature-text h3 {
+  font-size: 1rem;
+  color: #1D3557;
+  margin-bottom: 2px;
+}
+
+.lock-feature-text p {
+  font-size: 0.78rem;
+  color: #6C757D;
   font-weight: 600;
-  color: #1E40AF;
+  line-height: 1.3;
+}
+
+.lock-feature-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.activate-infant-lock-btn {
+  flex: 1 1 180px;
+  padding: 11px 14px;
+  background: #FF5400;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(255, 84, 0, 0.3);
+  transition: all 0.2s;
+  touch-action: manipulation;
+}
+
+.activate-infant-lock-btn:active {
+  transform: scale(0.96);
+}
+
+.activate-infant-lock-btn.active-lock {
+  background: #06D6A0;
+  box-shadow: 0 4px 10px rgba(6, 214, 160, 0.35);
+}
+
+.how-to-lock-guide-btn {
+  flex: 1 1 140px;
+  padding: 11px 14px;
+  background: #FFFFFF;
+  color: #1D3557;
+  border: 2px solid #CBD5E1;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.wake-lock-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #2D6A4F;
+  margin-top: 2px;
+}
+
+.wake-lock-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #06D6A0;
+  box-shadow: 0 0 6px #06D6A0;
+  display: inline-block;
+}
+
+/* Guided Access Illustrated Modal */
+.guide-card {
+  max-width: min(520px, 94vw);
+}
+
+.guide-hero-banner {
+  background: #E8F4FD;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  border: 2px solid #BEE1FD;
+}
+
+.guide-hero-icon {
+  font-size: 2.2rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.guide-hero-banner h4 {
+  font-size: 1.05rem;
+  color: #0353A4;
+  margin-bottom: 4px;
+}
+
+.guide-hero-banner p {
+  font-size: 0.82rem;
+  color: #0466C8;
+  font-weight: 600;
   line-height: 1.35;
+}
+
+.guide-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.guide-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 2px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.step-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FF5400;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.step-content strong {
+  display: block;
+  font-size: 0.92rem;
+  color: #1D3557;
+  margin-bottom: 2px;
+}
+
+.step-content p {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.guide-setup-note {
+  background: #FFF9E6;
+  border: 2px dashed #FFD166;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: #7A5800;
+  line-height: 1.4;
+}
+
+.guide-done-btn {
+  width: 100%;
+  padding: 13px;
+  background: #06D6A0;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(6, 214, 160, 0.35);
+  touch-action: manipulation;
 }
 
 /* Sticky Modal Footer: Save & Back button is permanently visible & tappable! */
