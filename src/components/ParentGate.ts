@@ -151,7 +151,7 @@ export class ParentGate {
         </div>
 
         <div class="parent-modal-footer">
-          <button class="parent-resume-btn">✨ Back to Storybook ✨</button>
+          <button class="parent-resume-btn">✨ Save & Back to Storybook ✨</button>
         </div>
       </div>
     `;

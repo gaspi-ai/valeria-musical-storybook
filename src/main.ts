@@ -111,13 +111,18 @@ class ToddlerStorybookApp {
 
   /**
    * Hardware Lockout: Prevents pinch-zoom, pull-refresh, context menu, text selection.
+   * Gracefully permits touch scrolling inside the parent settings modal.
    */
   private setupHardwareLockout(): void {
     // Prevent right-click context menu
     window.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
-    // Prevent multi-touch browser zooming (pinch-to-zoom)
+    // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal
     window.addEventListener('touchstart', (e) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.parent-modal-card, .parent-modal-body, .parent-modal-overlay')) {
+        return; // Allow touch in modal
+      }
       if (e.touches.length > 1) {
         // Allow toddler multi-touch in app, but prevent browser zoom
         e.preventDefault();
@@ -125,14 +130,24 @@ class ToddlerStorybookApp {
     }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
-      // Prevent pull-to-refresh
+      // Allow native finger scrolling inside the parent modal
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('.parent-modal-card, .parent-modal-body, .parent-modal-overlay')) {
+        return;
+      }
+      // Prevent pull-to-refresh and window bouncing on toddler storybook screen
       e.preventDefault();
     }, { passive: false });
 
     // Global multi-touch burst reaction: Any tap or slap anywhere spawns sparkles!
     window.addEventListener('pointerdown', (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      // Do not spawn bursts over parent settings modal
+      if (target && target.closest('.parent-modal-card, .parent-modal-overlay')) {
+        return;
+      }
       // Small sparkle if tapping outside interactables
-      if ((e.target as HTMLElement).tagName === 'CANVAS' || (e.target as HTMLElement).id === 'app') {
+      if (target && (target.tagName === 'CANVAS' || target.id === 'app')) {
         this.bursts.spawnBurst(e.clientX, e.clientY, 8, '#FFD166');
       }
     });
