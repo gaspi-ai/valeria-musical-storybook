@@ -25,7 +25,7 @@ Play the app online on any phone, tablet, iPad, or computer:
 - **Master Dynamics Compressor:** Prevents audio distortion or speaker clipping from enthusiastic toddler multi-touch slaps.
 - **Dynamic Multi-Track Stem Control:** Spinning wheels adjusts the engine rumble pitch and rhythm tempo; tapping the grille sounds the brass horn.
 
-### 3. Interactive Scenes
+### 3. Interactive Scenes (9 Storybook Worlds)
 
 #### Scene 1: "Wheels on the Bus" (Mechanical Cause & Effect)
 - **Rotatable Wheels:** Spinning wheels with momentum physics drive the parallax countryside and modulate the diesel engine sound.
@@ -40,9 +40,47 @@ Play the app online on any phone, tablet, iPad, or computer:
 - **Instrument Switcher:** Swap between Wooden Marimba, Sparkling Bells, Studio Grand Piano, and Dreamy Music Box.
 - **Call & Response:** Tap the Singing Bluebird companion to hear a gentle motif and see the target flower pad light up with a golden halo; celebrating correct taps with acoustic fanfare and colorful confetti!
 
-### 4. 3-Second Hold Parent Gate
-- Tucked in the top right corner behind a circular progress ring.
-- Requires continuous 3-second hold to open the Grown-Ups Menu (Scene Switcher, Audio Modes, Instruments, Volume slider, and Fullscreen toggle).
+#### Scene 3: "Old MacDonald's Farm" (Animal Voice Soundboard)
+- **Interactive Farm Animals:** Tap the Cow (moo), Fluffy Sheep (baa), Muddy Pig (oink & mud-roll), Duck Pond (quack & paddle), and Red Barn (chicken cluck).
+- **Chugging Tractor:** Tap to chug across the pastures with puffy exhaust smoke.
+- **Acoustic Banjo & Upright Bass:** Pentatonic chord changes synced to animal taps.
+
+#### Scene 4: "Itsy Bitsy Spider" (Climbing Physics & Rain)
+- **Spout Climbing Physics:** Drag or tap to slide the plush spider up and down the drain spout.
+- **Storm & Sun Mechanics:** Tap rainclouds for gentle acoustic rain and thunder claps; tap the golden sun to dry up all the rain.
+- **Acoustic Nylon Guitar:** Warm fingerpicking accompaniment following the toddler's touch.
+
+#### Scene 5: "Twinkle, Twinkle, Little Star" (Lullaby Stargazer)
+- **Constellation Chimes:** Tap twinkling stars to trigger sparkling celesta, glockenspiel, and music box chimes.
+- **Sleeping Moon:** Tap the smiling crescent moon to hear gentle, peaceful snores with floating dream bubbles.
+- **Shooting Stars:** Swipe across the night sky to launch glittering meteor showers.
+
+#### Scene 6: "Row, Row, Row Your Boat" (Water Stream Sensory)
+- **Wooden Rowboat with Oars:** Tap boat to row downstream through gentle river ripples with authentic wooden creaks.
+- **River Wildlife:** Tap leaping fish, croaking frogs on lily pads, and floating driftwood.
+- **Gentle Orchestral Harp:** Arpeggiated harp flourishes on every water ripple.
+
+#### Scene 7: "Bath Time Splash & Clean" (Sensory Water & Bubbles)
+- **Porcelain Clawfoot Tub:** Undulating water wave canvas with interactive splashes.
+- **Draggable Scrubbing Sponge:** Scratch-off cleaning removes mud patches from a cute puppy to trigger happy tail wags and clean celebrations.
+- **Squeaking Rubber Duck:** Bobs, dives underwater, and elastically rebounds.
+- **Brass Water Faucet & Soap Bubbles:** Toggle flowing water and tap floating iridescent soap bubbles with crystal bell tones.
+
+#### Scene 8: "Peek-a-Boo Meadow" (Object Permanence & Surprise)
+- **3 Thumb-Sized Hiding Spots:** Hollow Log, Rustling Flowering Bush, and Wooden Fence Gate.
+- **Hide-and-Seek Animals:** Baby Bear, Bunny, and Kitten peek their ears/tails, wiggling when nudged.
+- **Vocal & Musical Flourish:** Uncovering the hiding animal triggers joyful giggles and xylophone fanfare.
+- **Fluttering Butterflies:** Tap colorful butterflies scattering golden pollen dust.
+
+#### Scene 9: "Sound Paint / Finger Trail" (Open-Ended Synesthetic Canvas)
+- **Multi-Touch Polyphony:** Supports up to 5 concurrent fingers, each assigned a distinct pastel watercolor ribbon hue.
+- **Glowing Fluid Ribbons:** Bezier-smoothed watercolor ribbons that self-clean into twinkling stardust over 2.5 seconds.
+- **Pitch & Velocity Mapping:** Deep resonant C3/E3 cello and harp at the bottom; sparkling high C6 glockenspiel chimes at the top. Sustained touches trigger warm cello drone chords.
+
+### 4. 3-Second Hold Parent Gate & Infant Lock
+- Tucked in the top right corner behind a circular progress ring (or 2-finger top corner tap).
+- **Grown-Ups Menu:** Full 9-Scene Carousel, Audio Modes (Studio Song, Live Acoustic Band, Free Play), 8 Instrument soundbanks, Volume slider, and Fullscreen toggle.
+- **Infant Anti-Exit Lock:** Screen Wake Lock API keeps the display awake; optional 5-second hold lock and step-by-step Guided Access instructions for 100% toddler hardware lockout.
 
 ---
 

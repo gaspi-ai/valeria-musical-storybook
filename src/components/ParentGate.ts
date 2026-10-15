@@ -138,7 +138,7 @@ export class ParentGate {
 
           <!-- Scene Selector Carousel / Grid -->
           <div class="parent-section">
-            <label class="parent-label">Choose Storybook Scene (6 Scenes):</label>
+            <label class="parent-label">Choose Storybook Scene (9 Scenes):</label>
             <div class="parent-btn-group scene-grid-6">
               <button class="scene-select-btn ${this.currentScene === 'wheels' ? 'active' : ''}" data-scene="wheels">
                 <span class="scene-btn-icon">🚌</span>
@@ -163,6 +163,18 @@ export class ParentGate {
               <button class="scene-select-btn ${this.currentScene === 'row_boat' ? 'active' : ''}" data-scene="row_boat">
                 <span class="scene-btn-icon">🛶</span>
                 <span class="scene-btn-title">Row, Row, Row Your Boat</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'bath_time' ? 'active' : ''}" data-scene="bath_time">
+                <span class="scene-btn-icon">🛁</span>
+                <span class="scene-btn-title">Bath Time Splash</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'peekaboo_meadow' ? 'active' : ''}" data-scene="peekaboo_meadow">
+                <span class="scene-btn-icon">🌸</span>
+                <span class="scene-btn-title">Peek-a-Boo Meadow</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'sound_paint' ? 'active' : ''}" data-scene="sound_paint">
+                <span class="scene-btn-icon">🎨</span>
+                <span class="scene-btn-title">Sound Paint Canvas</span>
               </button>
             </div>
           </div>

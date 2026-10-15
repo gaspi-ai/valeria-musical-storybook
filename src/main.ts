@@ -19,6 +19,9 @@ import { OldMacDonaldScene } from './scenes/OldMacDonaldScene';
 import { ItsyBitsySpiderScene } from './scenes/ItsyBitsySpiderScene';
 import { TwinkleLittleStarScene } from './scenes/TwinkleLittleStarScene';
 import { RowYourBoatScene } from './scenes/RowYourBoatScene';
+import { BathTimeScene } from './scenes/BathTimeScene';
+import { PeekabooMeadowScene } from './scenes/PeekabooMeadowScene';
+import { SoundPaintScene } from './scenes/SoundPaintScene';
 
 class ToddlerStorybookApp {
   private appRoot: HTMLElement;
@@ -33,6 +36,9 @@ class ToddlerStorybookApp {
   private itsyBitsyScene: ItsyBitsySpiderScene;
   private twinkleStarScene: TwinkleLittleStarScene;
   private rowBoatScene: RowYourBoatScene;
+  private bathTimeScene: BathTimeScene;
+  private peekabooMeadowScene: PeekabooMeadowScene;
+  private soundPaintScene: SoundPaintScene;
 
   private parentGate: ParentGate;
 
@@ -48,13 +54,16 @@ class ToddlerStorybookApp {
     // 2. Hardware Touch Lockout & Global Multi-Touch Slap Handler
     this.setupHardwareLockout();
 
-    // 3. Initialize All 6 Interactive Scenes
+    // 3. Initialize All 9 Interactive Storybook Scenes
     this.wheelsScene = new WheelsScene(this.appRoot, this.bursts, this.ensemble);
     this.musicalMeScene = new MusicalMeScene(this.appRoot, this.bursts);
     this.oldMacDonaldScene = new OldMacDonaldScene(this.appRoot, this.bursts);
     this.itsyBitsyScene = new ItsyBitsySpiderScene(this.appRoot, this.bursts);
     this.twinkleStarScene = new TwinkleLittleStarScene(this.appRoot, this.bursts);
     this.rowBoatScene = new RowYourBoatScene(this.appRoot, this.bursts);
+    this.bathTimeScene = new BathTimeScene(this.appRoot, this.bursts);
+    this.peekabooMeadowScene = new PeekabooMeadowScene(this.appRoot, this.bursts);
+    this.soundPaintScene = new SoundPaintScene(this.appRoot, this.bursts);
 
     // Register with SceneManager
     this.sceneManager.registerScene(this.wheelsScene);
@@ -63,6 +72,9 @@ class ToddlerStorybookApp {
     this.sceneManager.registerScene(this.itsyBitsyScene);
     this.sceneManager.registerScene(this.twinkleStarScene);
     this.sceneManager.registerScene(this.rowBoatScene);
+    this.sceneManager.registerScene(this.bathTimeScene);
+    this.sceneManager.registerScene(this.peekabooMeadowScene);
+    this.sceneManager.registerScene(this.soundPaintScene);
 
     // 4. Subtle 3-Second Hold / 2-Finger Parent Gate & Settings Modal
     this.parentGate = new ParentGate(this.appRoot, {

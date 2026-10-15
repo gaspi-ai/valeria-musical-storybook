@@ -1,15 +1,14 @@
 /**
  * TouchBurstManager.ts
- * High-performance 60 FPS multi-touch burst particle system.
+ * High-performance 60 FPS multi-touch burst particle system with zero GC pauses.
  * 
- * Supports up to 5 concurrent touches with:
- * - Expanding acoustic ripple rings
- * - Shimmering golden stars & constellation dust
- * - Floating musical notes (♪, ♫, ♬)
- * - Translucent wobbling soap bubbles
- * - Water droplets & splash ripples (Duck pond, River, Rain)
- * - Mud splatters (Pig mud puddle)
- * - Tractor smoke puffs
+ * Features:
+ * - 40-particle object pool (zero garbage collection pauses on mobile WebKit).
+ * - Single HTML5 canvas layer for multi-touch ripples, bubbles, pollen dust, star chimes.
+ * - Expanding acoustic ripple rings.
+ * - Iridescent soap bubbles with buoyant wobble.
+ * - Water droplets & splash ripples (Bath Time Tub & Duck Pond).
+ * - Golden star & pollen dust (Meadow butterflies & Sound Paint stardust).
  */
 
 interface Particle {
@@ -22,10 +21,11 @@ interface Particle {
   alpha: number;
   life: number;
   maxLife: number;
-  type: 'star' | 'bubble' | 'note' | 'sparkle' | 'droplet' | 'mud' | 'smoke';
+  type: 'star' | 'bubble' | 'note' | 'sparkle' | 'droplet' | 'mud' | 'smoke' | 'pollen';
   text?: string;
   rotation: number;
   vRot: number;
+  active: boolean;
 }
 
 interface Ripple {
@@ -35,13 +35,22 @@ interface Ripple {
   maxRadius: number;
   color: string;
   alpha: number;
+  active: boolean;
 }
 
 export class TouchBurstManager {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+
+  // Active particle lists
   private particles: Particle[] = [];
   private ripples: Ripple[] = [];
+
+  // Reusable Object Pools (40 Particles + 20 Ripples)
+  private readonly POOL_SIZE = 40;
+  private particlePool: Particle[] = [];
+  private ripplePool: Ripple[] = [];
+
   private isRunning: boolean = false;
   private animationId: number = 0;
 
@@ -64,6 +73,37 @@ export class TouchBurstManager {
     container.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d', { alpha: true })!;
 
+    // Pre-allocate particle pool to guarantee 60 FPS without GC spikes
+    for (let i = 0; i < this.POOL_SIZE; i++) {
+      this.particlePool.push({
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        size: 10,
+        color: '#FFFFFF',
+        alpha: 1,
+        life: 0,
+        maxLife: 30,
+        type: 'sparkle',
+        rotation: 0,
+        vRot: 0,
+        active: false
+      });
+    }
+
+    for (let i = 0; i < 20; i++) {
+      this.ripplePool.push({
+        x: 0,
+        y: 0,
+        radius: 0,
+        maxRadius: 60,
+        color: '#FFFFFF',
+        alpha: 1,
+        active: false
+      });
+    }
+
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.start();
@@ -77,18 +117,70 @@ export class TouchBurstManager {
     this.ctx.scale(dpr, dpr);
   }
 
-  public spawnBurst(x: number, y: number, count: number = 12, hueColor?: string): void {
+  private getPooledParticle(): Particle {
+    const p = this.particlePool.pop() || {
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      size: 10,
+      color: '#FFFFFF',
+      alpha: 1,
+      life: 0,
+      maxLife: 30,
+      type: 'sparkle',
+      rotation: 0,
+      vRot: 0,
+      active: false
+    };
+    p.active = true;
+    p.life = 0;
+    p.alpha = 1;
+    return p;
+  }
+
+  private recycleParticle(p: Particle): void {
+    p.active = false;
+    p.text = undefined;
+    if (this.particlePool.length < this.POOL_SIZE) {
+      this.particlePool.push(p);
+    }
+  }
+
+  private getPooledRipple(): Ripple {
+    const r = this.ripplePool.pop() || {
+      x: 0,
+      y: 0,
+      radius: 0,
+      maxRadius: 60,
+      color: '#FFFFFF',
+      alpha: 1,
+      active: false
+    };
+    r.active = true;
+    r.alpha = 1;
+    return r;
+  }
+
+  private recycleRipple(r: Ripple): void {
+    r.active = false;
+    if (this.ripplePool.length < 20) {
+      this.ripplePool.push(r);
+    }
+  }
+
+  public spawnBurst(x: number, y: number, count: number = 10, hueColor?: string): void {
     const baseColor = hueColor || this.colors[Math.floor(Math.random() * this.colors.length)];
 
-    // Expanding acoustic ripple
-    this.ripples.push({
-      x,
-      y,
-      radius: 12,
-      maxRadius: 85 + Math.random() * 35,
-      color: baseColor,
-      alpha: 0.8
-    });
+    // Expanding acoustic ripple from pool
+    const rip = this.getPooledRipple();
+    rip.x = x;
+    rip.y = y;
+    rip.radius = 12;
+    rip.maxRadius = 85 + Math.random() * 35;
+    rip.color = baseColor;
+    rip.alpha = 0.8;
+    this.ripples.push(rip);
 
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
@@ -107,64 +199,61 @@ export class TouchBurstManager {
         type = 'star';
       }
 
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.2,
-        size: type === 'note' ? 18 + Math.random() * 10 : 8 + Math.random() * 12,
-        color: this.colors[Math.floor(Math.random() * this.colors.length)],
-        alpha: 1.0,
-        life: 0,
-        maxLife: 35 + Math.floor(Math.random() * 25),
-        type,
-        text,
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.15
-      });
+      const p = this.getPooledParticle();
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 1.2;
+      p.size = type === 'note' ? 18 + Math.random() * 10 : 8 + Math.random() * 12;
+      p.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+      p.maxLife = 32 + Math.floor(Math.random() * 20);
+      p.type = type;
+      p.text = text;
+      p.rotation = Math.random() * Math.PI * 2;
+      p.vRot = (Math.random() - 0.5) * 0.15;
+      this.particles.push(p);
     }
   }
 
   /**
    * Spawns authentic water splash droplets and ripple rings.
    */
-  public spawnWaterSplash(x: number, y: number, count: number = 14): void {
-    // Water ripple
-    this.ripples.push({
-      x,
-      y,
-      radius: 10,
-      maxRadius: 70 + Math.random() * 40,
-      color: '#4CC9F0',
-      alpha: 0.9
-    });
-    this.ripples.push({
-      x,
-      y,
-      radius: 5,
-      maxRadius: 45 + Math.random() * 25,
-      color: '#A0E4FF',
-      alpha: 0.7
-    });
+  public spawnWaterSplash(x: number, y: number, count: number = 12): void {
+    const rip1 = this.getPooledRipple();
+    rip1.x = x;
+    rip1.y = y;
+    rip1.radius = 10;
+    rip1.maxRadius = 70 + Math.random() * 40;
+    rip1.color = '#4CC9F0';
+    rip1.alpha = 0.9;
+    this.ripples.push(rip1);
+
+    const rip2 = this.getPooledRipple();
+    rip2.x = x;
+    rip2.y = y;
+    rip2.radius = 5;
+    rip2.maxRadius = 45 + Math.random() * 25;
+    rip2.color = '#A0E4FF';
+    rip2.alpha = 0.7;
+    this.ripples.push(rip2);
 
     const splashBlues = ['#4CC9F0', '#4895EF', '#3F37C9', '#CAF0F8', '#90E0EF'];
     for (let i = 0; i < count; i++) {
       const angle = -Math.PI * 0.8 + Math.random() * Math.PI * 0.6; // upward arc
       const speed = 3.5 + Math.random() * 6.0;
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2.5,
-        size: 5 + Math.random() * 7,
-        color: splashBlues[Math.floor(Math.random() * splashBlues.length)],
-        alpha: 0.95,
-        life: 0,
-        maxLife: 30 + Math.floor(Math.random() * 15),
-        type: 'droplet',
-        rotation: 0,
-        vRot: 0
-      });
+
+      const p = this.getPooledParticle();
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 2.5;
+      p.size = 5 + Math.random() * 7;
+      p.color = splashBlues[Math.floor(Math.random() * splashBlues.length)];
+      p.maxLife = 28 + Math.floor(Math.random() * 14);
+      p.type = 'droplet';
+      p.rotation = 0;
+      p.vRot = 0;
+      this.particles.push(p);
     }
   }
 
@@ -176,55 +265,126 @@ export class TouchBurstManager {
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5);
       const speed = 2.0 + Math.random() * 4.0;
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.5,
-        size: 7 + Math.random() * 11,
-        color: mudColors[Math.floor(Math.random() * mudColors.length)],
-        alpha: 1.0,
-        life: 0,
-        maxLife: 28 + Math.floor(Math.random() * 14),
-        type: 'mud',
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.2
-      });
+
+      const p = this.getPooledParticle();
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 1.5;
+      p.size = 7 + Math.random() * 11;
+      p.color = mudColors[Math.floor(Math.random() * mudColors.length)];
+      p.maxLife = 26 + Math.floor(Math.random() * 12);
+      p.type = 'mud';
+      p.rotation = Math.random() * Math.PI * 2;
+      p.vRot = (Math.random() - 0.5) * 0.2;
+      this.particles.push(p);
     }
   }
 
   /**
    * Spawns warm golden star glow and celestial dust for Twinkle Twinkle stars.
    */
-  public spawnStarGlow(x: number, y: number, count: number = 12, hueColor: string = '#FFE066'): void {
-    this.ripples.push({
-      x,
-      y,
-      radius: 14,
-      maxRadius: 90,
-      color: hueColor,
-      alpha: 0.85
-    });
+  public spawnStarGlow(x: number, y: number, count: number = 10, hueColor: string = '#FFE066'): void {
+    const rip = this.getPooledRipple();
+    rip.x = x;
+    rip.y = y;
+    rip.radius = 14;
+    rip.maxRadius = 80;
+    rip.color = hueColor;
+    rip.alpha = 0.85;
+    this.ripples.push(rip);
 
     const starGolds = ['#FFE066', '#FFD166', '#FFF3B0', '#F4D35E', '#FFFFFF'];
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 1.5 + Math.random() * 4.0;
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.5,
-        size: 8 + Math.random() * 12,
-        color: starGolds[Math.floor(Math.random() * starGolds.length)],
-        alpha: 1.0,
-        life: 0,
-        maxLife: 35 + Math.floor(Math.random() * 20),
-        type: 'star',
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.2
-      });
+
+      const p = this.getPooledParticle();
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 0.5;
+      p.size = 8 + Math.random() * 12;
+      p.color = starGolds[Math.floor(Math.random() * starGolds.length)];
+      p.maxLife = 32 + Math.floor(Math.random() * 16);
+      p.type = 'star';
+      p.rotation = Math.random() * Math.PI * 2;
+      p.vRot = (Math.random() - 0.5) * 0.2;
+      this.particles.push(p);
     }
+  }
+
+  /**
+   * Peek-a-Boo Meadow: Glowing pollen dust when butterflies are touched.
+   */
+  public spawnPollenSparkles(x: number, y: number, count: number = 14): void {
+    const pollenColors = ['#FFD166', '#FFE6A7', '#9BF6FF', '#FDFFB6', '#CAFFBF'];
+    const rip = this.getPooledRipple();
+    rip.x = x;
+    rip.y = y;
+    rip.radius = 8;
+    rip.maxRadius = 65;
+    rip.color = '#FFD166';
+    rip.alpha = 0.9;
+    this.ripples.push(rip);
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.2 + Math.random() * 3.5;
+
+      const p = this.getPooledParticle();
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 0.8;
+      p.size = 5 + Math.random() * 8;
+      p.color = pollenColors[Math.floor(Math.random() * pollenColors.length)];
+      p.maxLife = 35 + Math.floor(Math.random() * 20);
+      p.type = 'pollen';
+      p.rotation = Math.random() * Math.PI * 2;
+      p.vRot = (Math.random() - 0.5) * 0.1;
+      this.particles.push(p);
+    }
+  }
+
+  /**
+   * Bath Time: Soap bubbles bursting upward when sponge scrubs puppy.
+   */
+  public spawnSoapBubbles(x: number, y: number, count: number = 6): void {
+    const bubblePastels = ['#ADE8F4', '#CAF0F8', '#E0AAFF', '#FFCCD5', '#C77DFF'];
+    for (let i = 0; i < count; i++) {
+      const p = this.getPooledParticle();
+      p.x = x + (Math.random() - 0.5) * 20;
+      p.y = y + (Math.random() - 0.5) * 20;
+      p.vx = (Math.random() - 0.5) * 2.2;
+      p.vy = -1.8 - Math.random() * 2.5;
+      p.size = 14 + Math.random() * 16;
+      p.color = bubblePastels[Math.floor(Math.random() * bubblePastels.length)];
+      p.maxLife = 40 + Math.floor(Math.random() * 25);
+      p.type = 'bubble';
+      p.rotation = 0;
+      p.vRot = 0;
+      this.particles.push(p);
+    }
+  }
+
+  /**
+   * Sound Paint: Twinkling stardust drifting off the finger trail.
+   */
+  public spawnStardustTrail(x: number, y: number, color: string): void {
+    if (this.particles.length > 35) return; // Keep pool headroom
+    const p = this.getPooledParticle();
+    p.x = x + (Math.random() - 0.5) * 12;
+    p.y = y + (Math.random() - 0.5) * 12;
+    p.vx = (Math.random() - 0.5) * 1.5;
+    p.vy = -0.5 - Math.random() * 1.2;
+    p.size = 4 + Math.random() * 6;
+    p.color = color;
+    p.maxLife = 25 + Math.floor(Math.random() * 15);
+    p.type = 'sparkle';
+    p.rotation = Math.random() * Math.PI * 2;
+    p.vRot = (Math.random() - 0.5) * 0.2;
+    this.particles.push(p);
   }
 
   /**
@@ -232,20 +392,18 @@ export class TouchBurstManager {
    */
   public spawnSmokePuff(x: number, y: number): void {
     for (let i = 0; i < 3; i++) {
-      this.particles.push({
-        x: x + (Math.random() - 0.5) * 8,
-        y: y + (Math.random() - 0.5) * 6,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: -2.0 - Math.random() * 1.5,
-        size: 14 + Math.random() * 10,
-        color: 'rgba(235, 235, 235, 0.75)',
-        alpha: 0.85,
-        life: 0,
-        maxLife: 40 + Math.floor(Math.random() * 15),
-        type: 'smoke',
-        rotation: Math.random() * Math.PI * 2,
-        vRot: (Math.random() - 0.5) * 0.05
-      });
+      const p = this.getPooledParticle();
+      p.x = x + (Math.random() - 0.5) * 8;
+      p.y = y + (Math.random() - 0.5) * 6;
+      p.vx = (Math.random() - 0.5) * 1.5;
+      p.vy = -2.0 - Math.random() * 1.5;
+      p.size = 14 + Math.random() * 10;
+      p.color = 'rgba(235, 235, 235, 0.75)';
+      p.maxLife = 36 + Math.floor(Math.random() * 14);
+      p.type = 'smoke';
+      p.rotation = Math.random() * Math.PI * 2;
+      p.vRot = (Math.random() - 0.5) * 0.05;
+      this.particles.push(p);
     }
   }
 
@@ -276,6 +434,7 @@ export class TouchBurstManager {
       rip.alpha -= 0.025;
 
       if (rip.alpha <= 0 || rip.radius >= rip.maxRadius - 2) {
+        this.recycleRipple(rip);
         this.ripples.splice(i, 1);
         continue;
       }
@@ -297,7 +456,7 @@ export class TouchBurstManager {
       p.rotation += p.vRot;
 
       if (p.type === 'bubble') {
-        p.vy -= 0.06;
+        p.vy -= 0.05;
         p.vx += Math.sin(p.life * 0.2) * 0.15;
       } else if (p.type === 'smoke') {
         p.vy -= 0.04;
@@ -309,8 +468,11 @@ export class TouchBurstManager {
       } else if (p.type === 'mud') {
         p.vy += 0.3;
         p.vx *= 0.95;
+      } else if (p.type === 'pollen') {
+        p.vy += 0.02;
+        p.vx += Math.sin(p.life * 0.15) * 0.1;
       } else {
-        p.vy += 0.14;
+        p.vy += 0.12;
         p.vx *= 0.98;
       }
 
@@ -318,6 +480,7 @@ export class TouchBurstManager {
       p.alpha = Math.max(0, 1 - progress);
 
       if (p.life >= p.maxLife || p.alpha <= 0) {
+        this.recycleParticle(p);
         this.particles.splice(i, 1);
         continue;
       }
@@ -351,7 +514,6 @@ export class TouchBurstManager {
       } else if (p.type === 'star') {
         this.drawStar(0, 0, 5, p.size / 2, p.size / 4, p.color);
       } else if (p.type === 'droplet') {
-        // Teardrop shape for water
         this.ctx.beginPath();
         this.ctx.arc(0, 0, p.size / 2, 0, Math.PI);
         this.ctx.lineTo(0, -p.size * 0.9);
@@ -361,19 +523,23 @@ export class TouchBurstManager {
         this.ctx.shadowBlur = 4;
         this.ctx.fill();
       } else if (p.type === 'mud') {
-        // Blobby organic mud splatter
         this.ctx.beginPath();
         this.ctx.ellipse(0, 0, p.size / 2, p.size / 2.6, 0, 0, Math.PI * 2);
         this.ctx.fillStyle = p.color;
         this.ctx.fill();
       } else if (p.type === 'smoke') {
-        // Fluffy soft smoke circle
         this.ctx.beginPath();
         this.ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
         this.ctx.fillStyle = p.color;
         this.ctx.fill();
+      } else if (p.type === 'pollen') {
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+        this.ctx.fillStyle = p.color;
+        this.ctx.shadowColor = '#FFD166';
+        this.ctx.shadowBlur = 8;
+        this.ctx.fill();
       } else {
-        // Sparkling dot
         this.ctx.beginPath();
         this.ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
         this.ctx.fillStyle = p.color;

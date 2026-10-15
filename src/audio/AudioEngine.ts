@@ -3,12 +3,12 @@
  * Real Acoustic Audio Pipeline for Toddler Interactive Musical Storybook.
  * 
  * Features:
- * - Master Dynamics Compressor to eliminate clipping/distortion from aggressive toddler multi-touch slaps.
- * - Multi-scene asset loader with zero-latency memory pool caching.
- * - Integration with open-source GitHub CDN soundbanks (FluidR3_GM & Tone.js Instruments).
- * - High-Quality Acoustic Synthetic Fallback: if offline or CDN is blocked, synthesizes acoustic physical models.
- * - Hardware clock lookahead scheduler (AudioContext.currentTime) for rhythmic precision.
- * - Polyphonic voice playback routing through master limiter.
+ * - Master Dynamics Compressor (-12dB threshold, 8:1 ratio) to eliminate clipping/distortion from aggressive toddler slaps.
+ * - Real acoustic voice-stealing: limits active polyphony to 8 voices maximum, gently fading the oldest voice out over 20ms.
+ * - Zero-latency memory pool caching (AudioBufferPool) with preloading.
+ * - Integration with open-source GitHub CDN soundbanks (nbrosowsky/tonejs-instruments, Tonejs/audio, FluidR3_GM).
+ * - High-Quality Acoustic Synthetic Fallback: damped sine wave bell modeling & resonant bandpass noise for water.
+ * - Lookahead beat scheduler (110 BPM Ukulele Ragtime Swing & 95 BPM Bouncy Folk Acoustic).
  */
 
 export type InstrumentType = 
@@ -21,6 +21,7 @@ export type InstrumentType =
   | 'harp' 
   | 'nylon_guitar' 
   | 'bass' 
+  | 'cello'
   | 'woodblock';
 
 export interface SoundOptions {
@@ -35,6 +36,12 @@ export interface SoundOptions {
 
 export type BeatCallback = (beat: number, time: number) => void;
 
+interface ActiveVoice {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+  startTime: number;
+}
+
 export class AudioEngine {
   private static instance: AudioEngine;
   private ctx: AudioContext | null = null;
@@ -42,6 +49,10 @@ export class AudioEngine {
   private compressor: DynamicsCompressorNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
+
+  // Active Voice Polyphony Stealing (Cap at 8 voices max)
+  private activeVoices: ActiveVoice[] = [];
+  private readonly MAX_POLYPHONY = 8;
 
   // AudioBuffer cache memory pool
   private bufferCache: Map<string, AudioBuffer> = new Map();
@@ -52,9 +63,13 @@ export class AudioEngine {
   private engineGain: GainNode | null = null;
   private engineFilter: BiquadFilterNode | null = null;
 
-  // Active ambient background sound (rain, river, etc.)
+  // Active ambient background sound (rain, river, trickle, etc.)
   private ambientSource: AudioBufferSourceNode | null = null;
   private ambientGain: GainNode | null = null;
+
+  // Running water faucet continuous trickle node
+  private faucetSource: AudioBufferSourceNode | null = null;
+  private faucetGain: GainNode | null = null;
 
   // Studio song track node
   private songSource: AudioBufferSourceNode | null = null;
@@ -73,9 +88,17 @@ export class AudioEngine {
   private lookaheadMs: number = 100;
   private scheduleIntervalMs: number = 25;
 
+  // Dedicated scene groove schedulers
+  private isUkuleleSwingActive: boolean = false;
+  private ukuleleCleanup: (() => void) | null = null;
+  private isMeadowFolkActive: boolean = false;
+  private meadowCleanup: (() => void) | null = null;
+
   // Pentatonic scale definitions
   public static readonly PENTATONIC_SCALE = ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5', 'E5'];
   public static readonly BELL_SCALE = ['C5', 'D5', 'E5', 'G5', 'A5', 'C6'];
+  public static readonly CELLO_NOTES = ['C2', 'E2', 'G2', 'A2', 'C3', 'E3', 'G3', 'A3', 'C4', 'E4', 'G4', 'A4', 'C5'];
+  public static readonly HARP_NOTES = ['C3', 'E3', 'G3', 'A4', 'C5', 'E5', 'G5', 'A6'];
 
   private constructor() {}
 
@@ -95,11 +118,11 @@ export class AudioEngine {
         const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         this.ctx = new AudioCtx();
 
-        // Master Dynamics Compressor: Tames polyphonic multi-touch slaps without distortion
+        // Master Dynamics Compressor: Strictly configured to -12dB threshold & 8:1 ratio
         this.compressor = this.ctx.createDynamicsCompressor();
-        this.compressor.threshold.setValueAtTime(-14, this.ctx.currentTime);
+        this.compressor.threshold.setValueAtTime(-12, this.ctx.currentTime);
         this.compressor.knee.setValueAtTime(24, this.ctx.currentTime);
-        this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+        this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
         this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
         this.compressor.release.setValueAtTime(0.18, this.ctx.currentTime);
 
@@ -140,7 +163,7 @@ export class AudioEngine {
   }
 
   /**
-   * Resolves audio path respecting Vite's base URL (e.g. for GitHub Pages).
+   * Resolves audio path respecting Vite's base URL and GitHub CDN endpoints.
    */
   public resolveAudioPath(path: string): string {
     if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -154,7 +177,7 @@ export class AudioEngine {
   }
 
   /**
-   * Preloads an audio buffer from local path or CDN with memory pooling.
+   * Preloads an audio buffer from local path or GitHub CDN with memory pooling.
    */
   public async loadBuffer(urlOrPath: string): Promise<AudioBuffer | null> {
     const url = this.resolveAudioPath(urlOrPath);
@@ -167,7 +190,14 @@ export class AudioEngine {
 
     const promise = (async () => {
       try {
-        const res = await fetch(url);
+        let res = await fetch(url);
+        // If local request failed and it's a known instrument, fallback to open-source GitHub CDN
+        if (!res.ok) {
+          const cdnFallback = this.getGitHubCDNFallback(urlOrPath);
+          if (cdnFallback) {
+            res = await fetch(cdnFallback);
+          }
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const arrayBuffer = await res.arrayBuffer();
         if (!this.ctx) await this.unlock();
@@ -177,7 +207,23 @@ export class AudioEngine {
         this.bufferCache.set(url, audioBuffer);
         return audioBuffer;
       } catch (err) {
-        console.warn(`Could not load audio ${url}, fallback will be used if triggered.`);
+        // Soft fallback: try CDN if not tried already
+        const cdnUrl = this.getGitHubCDNFallback(urlOrPath);
+        if (cdnUrl && cdnUrl !== url) {
+          try {
+            const res2 = await fetch(cdnUrl);
+            if (res2.ok) {
+              const arrayBuffer2 = await res2.arrayBuffer();
+              if (this.ctx) {
+                const audioBuffer2 = await this.ctx.decodeAudioData(arrayBuffer2);
+                this.bufferCache.set(url, audioBuffer2);
+                return audioBuffer2;
+              }
+            }
+          } catch {
+            // fallback will be synthesized
+          }
+        }
         return null;
       }
     })();
@@ -186,8 +232,33 @@ export class AudioEngine {
     return promise;
   }
 
+  private getGitHubCDNFallback(name: string): string | null {
+    const clean = name.replace(/^.*[\\/]/, '');
+    const celloMatch = clean.match(/^cello_([A-G][s#b]?[0-8])\.mp3$/i);
+    if (celloMatch) {
+      return `https://nbrosowsky.github.io/tonejs-instruments/samples/cello/${celloMatch[1]}.mp3`;
+    }
+    const harpMatch = clean.match(/^harp(?:_tone)?_([A-G][s#b]?[0-8])\.mp3$/i);
+    if (harpMatch) {
+      return `https://nbrosowsky.github.io/tonejs-instruments/samples/harp/${harpMatch[1]}.mp3`;
+    }
+    if (clean === 'acoustic_kick.mp3') {
+      return 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/kick.mp3';
+    }
+    if (clean === 'acoustic_snare.mp3') {
+      return 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/snare.mp3';
+    }
+    if (clean === 'acoustic_hihat.mp3') {
+      return 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/hihat.mp3';
+    }
+    if (clean === 'acoustic_shaker.mp3' || clean === 'acoustic_egg_shaker.mp3') {
+      return 'https://tonejs.github.io/audio/berklee/shaker1.mp3';
+    }
+    return null;
+  }
+
   /**
-   * Preloads assets for a specific scene or all scenes.
+   * Preloads assets for a specific scene or all scenes ahead of time.
    */
   public async preloadScene(sceneId: string): Promise<void> {
     const assets: string[] = ['chime.mp3', 'boing.mp3', 'splash.mp3'];
@@ -225,20 +296,55 @@ export class AudioEngine {
       for (const n of ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5']) {
         assets.push(`harp_${n}.mp3`, `nylon_guitar_${n}.mp3`);
       }
+    } else if (sceneId === 'bath_time') {
+      // Scene A: Bath Time Splash & Clean
+      assets.push('squeak.mp3', 'splash.mp3', 'duck.mp3', 'dog.mp3', 'bubbles.ogg', 'woodblock.mp3', 'acoustic_shaker.mp3', 'river.ogg');
+      for (const n of ['C5', 'D5', 'E5', 'G5', 'A5']) {
+        assets.push(`glock_${n}.mp3`, `celesta_${n}.mp3`);
+      }
+      for (const n of ['C4', 'E4', 'G4', 'A4', 'C5']) {
+        assets.push(`nylon_guitar_${n}.mp3`, `banjo_${n}.mp3`);
+      }
+    } else if (sceneId === 'peekaboo_meadow') {
+      // Scene B: Peek-a-Boo Meadow
+      assets.push('laugh.mp3', 'chime.mp3', 'boing.mp3', 'acoustic_egg_shaker.mp3', 'meow.mp3');
+      for (const n of ['C5', 'G5', 'C6', 'G6']) {
+        assets.push(`xylo_${n}.mp3`);
+      }
+      for (const n of ['C2', 'E2', 'G2', 'A2', 'C3']) {
+        assets.push(`bass_${n}.mp3`);
+      }
+      for (const n of ['C4', 'D4', 'E4', 'G4', 'A4', 'C5']) {
+        assets.push(`nylon_guitar_${n}.mp3`);
+      }
+    } else if (sceneId === 'sound_paint') {
+      // Scene C: Sound Paint / Finger Trail
+      for (const n of AudioEngine.CELLO_NOTES) {
+        assets.push(`cello_${n}.mp3`);
+      }
+      for (const n of AudioEngine.HARP_NOTES) {
+        assets.push(`harp_tone_${n}.mp3`);
+      }
+      for (const n of AudioEngine.BELL_SCALE) {
+        assets.push(`glock_${n}.mp3`, `musicbox_${n}.mp3`);
+      }
     }
 
     await Promise.allSettled(assets.map(a => this.loadBuffer(a)));
   }
 
   public async preloadAll(): Promise<void> {
-    const scenes = ['wheels', 'musical_me', 'old_macdonald', 'itsy_bitsy', 'twinkle_star', 'row_boat'];
+    const scenes = [
+      'wheels', 'musical_me', 'old_macdonald', 'itsy_bitsy',
+      'twinkle_star', 'row_boat', 'bath_time', 'peekaboo_meadow', 'sound_paint'
+    ];
     for (const sc of scenes) {
       this.preloadScene(sc).catch(() => {});
     }
   }
 
   /**
-   * Plays a real acoustic sound sample with fallback to synthesis if offline/unloaded.
+   * Plays a real acoustic sound sample with acoustic voice-stealing (8 max polyphony).
    */
   public playSound(urlOrName: string, options: SoundOptions = {}): AudioBufferSourceNode | null {
     if (!this.ctx || this.ctx.state !== 'running') return null;
@@ -247,15 +353,31 @@ export class AudioEngine {
     const buffer = this.bufferCache.get(url);
 
     if (!buffer) {
-      // Trigger async load for future presses
+      // Trigger async preload for future presses
       this.loadBuffer(url).then(b => {
         if (b && options.loop) {
           this.playSound(url, options);
         }
       });
-      // Fallback synthesizer so child immediately gets tactile audio feedback!
+      // Fallback physical model synthesizer so child immediately gets tactile audio feedback!
       this.synthesizeAcousticFallback(urlOrName, options);
       return null;
+    }
+
+    // --- REAL ACOUSTIC VOICE-STEALING (8 Voices Max, 20ms Fade Out) ---
+    if (this.activeVoices.length >= this.MAX_POLYPHONY) {
+      const oldest = this.activeVoices.shift();
+      if (oldest && this.ctx) {
+        try {
+          const now = this.ctx.currentTime;
+          const fadeTime = now + 0.02; // 20ms gentle fade out
+          oldest.gain.gain.setValueAtTime(oldest.gain.gain.value, now);
+          oldest.gain.gain.linearRampToValueAtTime(0.0001, fadeTime);
+          oldest.source.stop(fadeTime);
+        } catch {
+          // ignore already stopped source
+        }
+      }
     }
 
     const source = this.ctx.createBufferSource();
@@ -295,6 +417,16 @@ export class AudioEngine {
       source.start(startTime);
     }
 
+    // Register active voice
+    const voiceRecord: ActiveVoice = { source, gain: gainNode, startTime };
+    this.activeVoices.push(voiceRecord);
+    source.onended = () => {
+      const idx = this.activeVoices.indexOf(voiceRecord);
+      if (idx !== -1) {
+        this.activeVoices.splice(idx, 1);
+      }
+    };
+
     return source;
   }
 
@@ -302,6 +434,13 @@ export class AudioEngine {
    * Plays a real acoustic instrument note across multiple soundbanks.
    */
   public playInstrumentNote(instrument: InstrumentType, note: string, options: SoundOptions = {}): AudioBufferSourceNode | null {
+    if (instrument === 'cello') {
+      return this.playCelloNote(note, options);
+    }
+    if (instrument === 'harp') {
+      return this.playHarpNote(note, options);
+    }
+
     const filename = `${instrument}_${note}.mp3`;
     const url = this.resolveAudioPath(filename);
     let buffer = this.bufferCache.get(url);
@@ -330,8 +469,338 @@ export class AudioEngine {
   }
 
   /**
+   * Plays studio acoustic Cello sample from tonejs-instruments.
+   */
+  public playCelloNote(note: string, options: SoundOptions = {}): AudioBufferSourceNode | null {
+    const filename = `cello_${note}.mp3`;
+    const url = this.resolveAudioPath(filename);
+    if (this.bufferCache.has(url)) {
+      return this.playSound(url, options);
+    }
+
+    // Try finding closest available cello sample and pitch-shift
+    const targetFreq = this.noteNameToFrequency(note);
+    let bestNote = 'C3';
+    let minDiff = Infinity;
+    for (const cn of AudioEngine.CELLO_NOTES) {
+      const cached = this.bufferCache.has(this.resolveAudioPath(`cello_${cn}.mp3`));
+      if (cached) {
+        const diff = Math.abs(this.noteNameToFrequency(cn) - targetFreq);
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestNote = cn;
+        }
+      }
+    }
+
+    const bestUrl = this.resolveAudioPath(`cello_${bestNote}.mp3`);
+    if (this.bufferCache.has(bestUrl)) {
+      const ratio = targetFreq / this.noteNameToFrequency(bestNote);
+      return this.playSound(bestUrl, { ...options, pitch: (options.pitch || 1.0) * ratio });
+    }
+
+    // Trigger load and synthesize fallback
+    this.loadBuffer(`https://nbrosowsky.github.io/tonejs-instruments/samples/cello/${note}.mp3`);
+    return this.playSound(url, options);
+  }
+
+  /**
+   * Plays studio acoustic Harp sample from tonejs-instruments.
+   */
+  public playHarpNote(note: string, options: SoundOptions = {}): AudioBufferSourceNode | null {
+    const filename = `harp_tone_${note}.mp3`;
+    const url = this.resolveAudioPath(filename);
+    if (this.bufferCache.has(url)) {
+      return this.playSound(url, options);
+    }
+
+    // Try standard harp_ note
+    const stdUrl = this.resolveAudioPath(`harp_${note}.mp3`);
+    if (this.bufferCache.has(stdUrl)) {
+      return this.playSound(stdUrl, options);
+    }
+
+    // Closest pitch shift
+    const targetFreq = this.noteNameToFrequency(note);
+    let bestNote = 'C5';
+    let minDiff = Infinity;
+    for (const hn of AudioEngine.HARP_NOTES) {
+      const u = this.resolveAudioPath(`harp_tone_${hn}.mp3`);
+      if (this.bufferCache.has(u)) {
+        const diff = Math.abs(this.noteNameToFrequency(hn) - targetFreq);
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestNote = hn;
+        }
+      }
+    }
+
+    const bestUrl = this.resolveAudioPath(`harp_tone_${bestNote}.mp3`);
+    if (this.bufferCache.has(bestUrl)) {
+      const ratio = targetFreq / this.noteNameToFrequency(bestNote);
+      return this.playSound(bestUrl, { ...options, pitch: (options.pitch || 1.0) * ratio });
+    }
+
+    return this.playSound(url, options);
+  }
+
+  /**
+   * Plays Glockenspiel bell tone.
+   */
+  public playGlockNote(note: string, options: SoundOptions = {}): AudioBufferSourceNode | null {
+    return this.playInstrumentNote('glock', note, options);
+  }
+
+  /**
+   * Plays Music Box chime.
+   */
+  public playMusicBoxNote(note: string, options: SoundOptions = {}): AudioBufferSourceNode | null {
+    return this.playInstrumentNote('musicbox', note, options);
+  }
+
+  /**
+   * Bath Time: Sponge squeak sound.
+   */
+  public playSqueak(options: SoundOptions = {}): void {
+    const pitch = 0.9 + Math.random() * 0.35;
+    this.playSound('squeak.mp3', { volume: 0.85, pitch, ...options });
+  }
+
+  /**
+   * Bath Time: Pentatonic bubble pop bell.
+   */
+  public playBubblePop(note: string = 'C5', options: SoundOptions = {}): void {
+    // Immediate acoustic bubble pop sound + crystal bell chime
+    this.playSound('bubbles.ogg', { volume: 0.75, offset: 0.05, duration: 0.25 });
+    this.playInstrumentNote('glock', note, { volume: 0.8, pitch: 1.0 + (Math.random() - 0.5) * 0.05, ...options });
+  }
+
+  /**
+   * Bath Time: Rubber Duck squeak & buoyant splash.
+   */
+  public playRubberDuck(options: SoundOptions = {}): void {
+    this.playSound('squeak.mp3', { volume: 1.0, pitch: 1.35 });
+    this.playSound('duck.mp3', { volume: 0.9, ...options });
+    this.playSound('splash.mp3', { volume: 0.6, pitch: 1.2 });
+  }
+
+  /**
+   * Bath Time: Running Faucet trickle stream toggle.
+   */
+  public toggleFaucetRunningWater(): boolean {
+    if (this.faucetSource) {
+      this.stopFaucetRunningWater();
+      return false;
+    } else {
+      this.startFaucetRunningWater();
+      return true;
+    }
+  }
+
+  public async startFaucetRunningWater(): Promise<void> {
+    if (!this.ctx) await this.unlock();
+    if (!this.ctx || this.faucetSource) return;
+
+    const buffer = await this.loadBuffer('river.ogg');
+    if (!buffer) {
+      // Fallback synthesizer trickle
+      this.synthesizeWaterTrickle(true);
+      return;
+    }
+
+    this.faucetSource = this.ctx.createBufferSource();
+    this.faucetSource.buffer = buffer;
+    this.faucetSource.loop = true;
+    this.faucetSource.playbackRate.setValueAtTime(1.4, this.ctx.currentTime); // Fast trickle
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
+    filter.Q.setValueAtTime(1.8, this.ctx.currentTime);
+
+    this.faucetGain = this.ctx.createGain();
+    this.faucetGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+    this.faucetGain.gain.exponentialRampToValueAtTime(0.4, this.ctx.currentTime + 0.3);
+
+    this.faucetSource.connect(filter);
+    filter.connect(this.faucetGain);
+    this.faucetGain.connect(this.sfxGain!);
+
+    this.faucetSource.start();
+  }
+
+  public stopFaucetRunningWater(): void {
+    if (this.faucetSource && this.ctx && this.faucetGain) {
+      try {
+        const now = this.ctx.currentTime;
+        this.faucetGain.gain.setValueAtTime(this.faucetGain.gain.value, now);
+        this.faucetGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+        this.faucetSource.stop(now + 0.3);
+      } catch {}
+      this.faucetSource = null;
+      this.faucetGain = null;
+    }
+  }
+
+  /**
+   * Peek-a-Boo: Joyful human vocal "Peek-a-Boo!" or giggle + xylophone flourish.
+   */
+  public playPeekabooFlourish(): void {
+    // 1. Joyful human giggle
+    this.playSound('laugh.mp3', { volume: 0.95 });
+
+    // 2. Sparkly springy flourish
+    this.playSound('boing.mp3', { volume: 0.65, pitch: 1.2 });
+
+    // 3. Bright Xylophone / chime flourish arpeggio (C5 -> E5 -> G5 -> C6)
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      const notes = ['C5', 'E5', 'G5', 'C6'];
+      notes.forEach((n, idx) => {
+        const time = now + idx * 0.08;
+        this.playSound(`xylo_${n}.mp3`, { volume: 0.85, time });
+        this.playSound(`glock_${n}.mp3`, { volume: 0.7, time });
+      });
+      this.playSound('chime.mp3', { volume: 0.8, time: now + 0.35 });
+    }
+  }
+
+  /**
+   * Friendly animal reactions for Peek-a-Boo Meadow.
+   */
+  public playAnimalSound(type: 'bear' | 'bunny' | 'kitten' | 'dog' | 'cow' | 'sheep' | 'duck' | 'pig'): void {
+    if (type === 'kitten') {
+      this.playSound('meow.mp3', { volume: 0.9, pitch: 1.15 });
+    } else if (type === 'bear') {
+      // Warm playful baby bear grumble
+      this.playSound('laugh.mp3', { volume: 0.85, pitch: 0.75 });
+    } else if (type === 'bunny') {
+      // Gentle bunny squeak & thump
+      this.playSound('squeak.mp3', { volume: 0.9, pitch: 1.4 });
+      this.playSound('woodblock.mp3', { volume: 0.7, pitch: 1.2 });
+    } else if (type === 'dog') {
+      this.playSound('dog.mp3', { volume: 0.9 });
+    } else if (type === 'cow') {
+      this.playSound('cow.ogg', { volume: 0.85 });
+    } else if (type === 'sheep') {
+      this.playSound('sheep.ogg', { volume: 0.85 });
+    } else if (type === 'duck') {
+      this.playSound('duck.mp3', { volume: 0.85 });
+    }
+  }
+
+  /**
+   * Scene A: Acoustic Ukulele Ragtime Swing Rhythm (4/4 time, ~110 BPM)
+   * Real acoustic washboard scraping + shaker rhythm + swing ukulele chords.
+   */
+  public startUkuleleSwingGroove(): void {
+    if (this.isUkuleleSwingActive) return;
+    this.isUkuleleSwingActive = true;
+    this.startScheduler(110);
+
+    // Ragtime chord progression: C - Am - Dm - G7 in 4-beat swing
+    const chordVoicings: Record<number, string[]> = {
+      0: ['C4', 'E4', 'G4', 'C5'], // C Major
+      1: ['A4', 'C5', 'E5'],       // A Minor
+      2: ['D4', 'F4', 'A4'],       // D Minor
+      3: ['G4', 'B4', 'D5']        // G
+    };
+
+    this.ukuleleCleanup = this.onBeat((beatNum, time) => {
+      const beatInMeasure = beatNum % 4;
+      const measure = Math.floor(beatNum / 4) % 4;
+      const chord = chordVoicings[measure] || chordVoicings[0];
+
+      // Washboard scraping & shaker groove
+      if (beatInMeasure === 0 || beatInMeasure === 2) {
+        // Downbeat acoustic shaker
+        this.playSound('acoustic_shaker.mp3', { time, volume: 0.45 });
+      } else {
+        // Backbeat washboard scrape (woodblock pitch-shifted)
+        this.playSound('woodblock.mp3', { time, volume: 0.55, pitch: 1.25 });
+        this.playSound('acoustic_egg_shaker.mp3', { time, volume: 0.4 });
+      }
+
+      // Ukulele Swing Strum on the beat
+      chord.forEach((note, idx) => {
+        const strumOffset = time + (idx * 0.015);
+        this.playSound(`nylon_guitar_${note}.mp3`, { time: strumOffset, volume: 0.42 });
+        this.playSound(`banjo_${note}.mp3`, { time: strumOffset, volume: 0.25 });
+      });
+
+      // Swing offbeat 8th note strum
+      const swing8th = time + (60.0 / 110) * 0.62;
+      chord.slice(1).forEach((note, idx) => {
+        this.playSound(`nylon_guitar_${note}.mp3`, { time: swing8th + (idx * 0.012), volume: 0.3 });
+      });
+    });
+  }
+
+  public stopUkuleleSwingGroove(): void {
+    this.isUkuleleSwingActive = false;
+    if (this.ukuleleCleanup) {
+      this.ukuleleCleanup();
+      this.ukuleleCleanup = null;
+    }
+  }
+
+  /**
+   * Scene B: Bouncy Acoustic Folk Rhythm (4/4 time, 95 BPM)
+   * Acoustic guitar fingerpicking + upright bass + gentle egg shaker.
+   */
+  public startMeadowFolkGroove(): void {
+    if (this.isMeadowFolkActive) return;
+    this.isMeadowFolkActive = true;
+    this.startScheduler(95);
+
+    // Bouncy folk bassline: C2 -> G2 -> A2 -> E2
+    const bassNotes = ['C2', 'G2', 'A2', 'E2'];
+    // Fingerpicking notes
+    const fingerpickPatterns: string[][] = [
+      ['C4', 'E4', 'G4', 'C5'],
+      ['G4', 'B4', 'D5', 'G5'],
+      ['A4', 'C5', 'E5', 'A5'],
+      ['E4', 'G4', 'B4', 'E5']
+    ];
+
+    this.meadowCleanup = this.onBeat((beatNum, time) => {
+      const beatInMeasure = beatNum % 4;
+      const measure = Math.floor(beatNum / 4) % 4;
+      const rootBass = bassNotes[measure] || 'C2';
+      const pickPattern = fingerpickPatterns[measure] || fingerpickPatterns[0];
+
+      // Upright bass on beats 1 and 3
+      if (beatInMeasure === 0) {
+        this.playSound(`bass_${rootBass}.mp3`, { time, volume: 0.7 });
+      } else if (beatInMeasure === 2) {
+        this.playSound('bass_G2.mp3', { time, volume: 0.65 });
+      }
+
+      // Gentle acoustic egg shaker
+      this.playSound('acoustic_egg_shaker.mp3', { time, volume: 0.35 });
+
+      // Acoustic fingerpicking arpeggio
+      const noteToPick = pickPattern[beatInMeasure % pickPattern.length];
+      this.playSound(`nylon_guitar_${noteToPick}.mp3`, { time, volume: 0.5 });
+
+      // Folk offbeat finger flick
+      const offbeatTime = time + (60.0 / 95) * 0.5;
+      const offbeatNote = pickPattern[(beatInMeasure + 2) % pickPattern.length];
+      this.playSound(`nylon_guitar_${offbeatNote}.mp3`, { time: offbeatTime, volume: 0.38 });
+    });
+  }
+
+  public stopMeadowFolkGroove(): void {
+    this.isMeadowFolkActive = false;
+    if (this.meadowCleanup) {
+      this.meadowCleanup();
+      this.meadowCleanup = null;
+    }
+  }
+
+  /**
    * High-Quality Web Audio Acoustic Model Synthesizer Fallback.
-   * Ensures the storybook NEVER goes silent even with network disconnects!
+   * Damped sine wave modeling for bells and resonant bandpass noise for water splashes.
    */
   public synthesizeAcousticFallback(name: string, options: SoundOptions = {}): void {
     if (!this.ctx || this.ctx.state !== 'running') return;
@@ -343,7 +812,47 @@ export class AudioEngine {
     const noteMatch = name.match(/([A-G][#b]?[0-8])/i);
     const freq = noteMatch ? this.noteNameToFrequency(noteMatch[1].toUpperCase()) : 440;
 
-    if (name.includes('glock') || name.includes('bell') || name.includes('celesta') || name.includes('chime')) {
+    if (name.includes('splash') || name.includes('water') || name.includes('river')) {
+      // Resonant bandpass noise for water splash
+      this.synthesizeWaterSplash(vol);
+    } else if (name.includes('squeak') || name.includes('duck')) {
+      // Rubber toy squeak
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1100, now);
+      osc.frequency.exponentialRampToValueAtTime(1800, now + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.16);
+      gain.gain.setValueAtTime(vol * 0.6, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (name.includes('cello')) {
+      // Warm bowed cello acoustic physical model
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(freq * 3.2, now);
+      filter.Q.setValueAtTime(2.5, now);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(vol * 0.85, now + 0.05); // Gentle bow attack
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(now);
+      osc.stop(now + 1.45);
+    } else if (name.includes('glock') || name.includes('bell') || name.includes('celesta') || name.includes('chime') || name.includes('musicbox')) {
       // Resonant metallic bell model (dual sine + high harmonic decay)
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
@@ -410,7 +919,7 @@ export class AudioEngine {
       osc.start(now);
       osc.stop(now + 0.85);
     } else {
-      // Gentle universal pop/splash chime
+      // Universal warm acoustic pop chime
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
@@ -428,11 +937,48 @@ export class AudioEngine {
     }
   }
 
+  private synthesizeWaterSplash(vol: number): void {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const bufferSize = this.ctx.sampleRate * 0.4;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(800, now);
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.35);
+    filter.Q.setValueAtTime(3.0, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol * 0.9, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain!);
+
+    noise.start(now);
+    noise.stop(now + 0.4);
+  }
+
+  private synthesizeWaterTrickle(active: boolean): void {
+    if (!active || !this.ctx) return;
+    this.synthesizeWaterSplash(0.4);
+  }
+
   private noteNameToFrequency(note: string): number {
     const semitonesFromA4: Record<string, number> = {
       'C4': -9, 'D4': -7, 'E4': -5, 'F4': -4, 'G4': -2, 'A4': 0, 'B4': 2,
       'C5': 3, 'D5': 5, 'E5': 7, 'F5': 8, 'G5': 10, 'A5': 12, 'B5': 14,
-      'C6': 15, 'C2': -33, 'E2': -29, 'G2': -26, 'C3': -21, 'E3': -17, 'G3': -14
+      'C6': 15, 'D6': 17, 'E6': 19, 'G6': 22, 'A6': 24,
+      'C2': -33, 'E2': -29, 'G2': -26, 'A2': -24, 'C3': -21, 'E3': -17, 'G3': -14, 'A3': -12
     };
     const st = semitonesFromA4[note] ?? 0;
     return 440 * Math.pow(2, st / 12);
@@ -442,13 +988,13 @@ export class AudioEngine {
     const noteMap: Record<string, number> = {
       'C4': -12, 'D4': -10, 'E4': -8, 'F4': -7, 'G4': -5, 'A4': -3, 'B4': -1,
       'C5': 0, 'D5': 2, 'E5': 4, 'F5': 5, 'G5': 7, 'A5': 9, 'B5': 11,
-      'C6': 12
+      'C6': 12, 'D6': 14, 'E6': 16, 'G6': 19, 'A6': 21
     };
     return noteMap[note] ?? 0;
   }
 
   /**
-   * Starts ambient background loop (rain, river, waves) with gentle crossfade.
+   * Starts ambient background loop with gentle crossfade.
    */
   public async playAmbientSound(urlOrName: string, targetVolume: number = 0.35): Promise<void> {
     if (!this.ctx) await this.unlock();
@@ -480,9 +1026,7 @@ export class AudioEngine {
         this.ambientGain.gain.setValueAtTime(this.ambientGain.gain.value, now);
         this.ambientGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
         this.ambientSource.stop(now + 0.45);
-      } catch {
-        // ignore
-      }
+      } catch {}
       this.ambientSource = null;
       this.ambientGain = null;
     }
@@ -604,7 +1148,10 @@ export class AudioEngine {
    * Lookahead Beat Scheduler.
    */
   public startScheduler(bpm: number = 104): void {
-    if (this.isScheduling) return;
+    if (this.isScheduling) {
+      this.bpm = bpm;
+      return;
+    }
     this.bpm = bpm;
     this.isScheduling = true;
     if (this.ctx) {
@@ -663,6 +1210,9 @@ export class AudioEngine {
   public stopAllLoops(): void {
     this.stopEngineRumble();
     this.stopAmbientSound();
+    this.stopFaucetRunningWater();
+    this.stopUkuleleSwingGroove();
+    this.stopMeadowFolkGroove();
     this.pauseSongTrack();
     this.stopScheduler();
   }
