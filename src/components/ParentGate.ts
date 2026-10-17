@@ -15,6 +15,7 @@ export interface ParentGateCallbacks {
   onSceneChange: (scene: string) => void;
   onAudioModeChange: (mode: 'song' | 'ensemble' | 'free') => void;
   onInstrumentChange: (inst: InstrumentType) => void;
+  onOpenJukebox?: () => void;
 }
 
 export class ParentGate {
@@ -134,6 +135,20 @@ export class ParentGate {
               <span class="wake-lock-dot active"></span>
               <span class="wake-lock-label">Screen Keep-Awake: <strong>Active (Won't Sleep)</strong></span>
             </div>
+          </div>
+
+          <!-- Toddler Jukebox Launch Card -->
+          <div class="parent-section jukebox-parent-launch-card" style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; color: white; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 2rem;">🎶</span>
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: #FFFFFF;">Toddler Songs Jukebox</h3>
+                <p style="font-size: 0.8rem; margin: 2px 0 0 0; color: #E0E7FF;">6 Interactive Animated Songs with Fullscreen Theater</p>
+              </div>
+            </div>
+            <button id="btn-open-jukebox" style="background: #FFFFFF; color: #4338CA; border: none; font-weight: 800; font-size: 0.85rem; padding: 10px 16px; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
+              LAUNCH ➔
+            </button>
           </div>
 
           <!-- Scene Selector Carousel / Grid -->
@@ -416,6 +431,17 @@ export class ParentGate {
     openGuideBtn.addEventListener('click', () => {
       this.openGuideModal();
     });
+
+    // Launch Toddler Songs Jukebox
+    const openJukeboxBtn = this.modalOverlay.querySelector('#btn-open-jukebox') as HTMLElement;
+    if (openJukeboxBtn) {
+      openJukeboxBtn.addEventListener('click', () => {
+        this.closeModal();
+        if (this.callbacks.onOpenJukebox) {
+          this.callbacks.onOpenJukebox();
+        }
+      });
+    }
 
     // Close Lock Guide
     const guideCloseBtn = this.guideModalOverlay.querySelector('.guide-close-btn') as HTMLElement;

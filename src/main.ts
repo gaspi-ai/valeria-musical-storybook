@@ -22,6 +22,7 @@ import { RowYourBoatScene } from './scenes/RowYourBoatScene';
 import { BathTimeScene } from './scenes/BathTimeScene';
 import { PeekabooMeadowScene } from './scenes/PeekabooMeadowScene';
 import { SoundPaintScene } from './scenes/SoundPaintScene';
+import { SongsJukebox } from './components/SongsJukebox';
 
 class ToddlerStorybookApp {
   private appRoot: HTMLElement;
@@ -40,6 +41,8 @@ class ToddlerStorybookApp {
   private peekabooMeadowScene: PeekabooMeadowScene;
   private soundPaintScene: SoundPaintScene;
 
+  private songsJukebox: SongsJukebox;
+  private floatingJukeboxBtn!: HTMLElement;
   private parentGate: ParentGate;
 
   constructor() {
@@ -76,13 +79,20 @@ class ToddlerStorybookApp {
     this.sceneManager.registerScene(this.peekabooMeadowScene);
     this.sceneManager.registerScene(this.soundPaintScene);
 
-    // 4. Subtle 3-Second Hold / 2-Finger Parent Gate & Settings Modal
+    // 4. Dedicated Songs Jukebox (Toddler Jukebox & Fullscreen Animated Theater)
+    this.songsJukebox = new SongsJukebox(this.appRoot, () => {
+      this.handleExitJukebox();
+    });
+    this.createFloatingJukeboxButton();
+
+    // 5. Subtle 3-Second Hold / 2-Finger Parent Gate & Settings Modal
     this.parentGate = new ParentGate(this.appRoot, {
       onSceneChange: (sceneId) => {
         this.switchScene(sceneId);
       },
       onAudioModeChange: (mode) => this.setAudioMode(mode),
-      onInstrumentChange: (inst) => this.setInstrument(inst)
+      onInstrumentChange: (inst) => this.setInstrument(inst),
+      onOpenJukebox: () => this.openJukebox()
     });
 
     // Sync SceneManager events back to Parent Gate
@@ -90,10 +100,10 @@ class ToddlerStorybookApp {
       this.parentGate.setScene(sceneId);
     });
 
-    // 5. Preload Audio in Background
+    // 6. Preload Audio in Background
     this.engine.preloadAll().catch(console.warn);
 
-    // 6. Graceful "Tap to Play" Audio Unlock Screen
+    // 7. Graceful "Tap to Play" Audio Unlock Screen
     new IntroScreen(this.appRoot, this.bursts, () => {
       this.startApp();
     });
@@ -143,24 +153,65 @@ class ToddlerStorybookApp {
   }
 
   /**
+   * Floating "🎶 SONGS" button on main screen to quickly jump to Jukebox.
+   */
+  private createFloatingJukeboxButton(): void {
+    this.floatingJukeboxBtn = document.createElement('button');
+    this.floatingJukeboxBtn.className = 'floating-jukebox-btn';
+    this.floatingJukeboxBtn.setAttribute('aria-label', 'Open Toddler Songs Jukebox');
+    this.floatingJukeboxBtn.innerHTML = `
+      <span class="btn-note-icon">🎶</span>
+      <span class="btn-text">SONGS</span>
+    `;
+    this.floatingJukeboxBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openJukebox();
+    });
+    this.appRoot.appendChild(this.floatingJukeboxBtn);
+  }
+
+  /**
+   * Opens the Songs Jukebox and stops storybook scene audio.
+   */
+  public openJukebox(): void {
+    this.ensemble.stop();
+    this.engine.pauseSongTrack();
+    this.floatingJukeboxBtn.style.display = 'none';
+    this.songsJukebox.openJukebox();
+  }
+
+  /**
+   * Called when returning from Jukebox to Storybook.
+   */
+  private handleExitJukebox(): void {
+    this.floatingJukeboxBtn.style.display = 'flex';
+    const activeId = this.sceneManager.getActiveSceneId();
+    if (activeId === 'wheels') {
+      this.ensemble.start();
+    }
+  }
+
+  /**
    * Hardware Lockout: Prevents pinch-zoom, pull-refresh, context menu, text selection.
-   * Gracefully permits touch scrolling inside the parent settings modal.
+   * Gracefully permits touch scrolling inside the parent settings modal and Jukebox.
    */
   private setupHardwareLockout(): void {
     // Prevent right-click context menu
     window.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
-    // Helper to check if any settings or guide modal is open
-    const isModalOpen = (): boolean => {
-      const active = document.querySelector('.parent-modal-overlay:not([style*="display: none"])');
-      return !!active;
+    // Helper to check if any settings, guide modal, or Jukebox is open
+    const isInteractiveOverlayOpen = (): boolean => {
+      const activeModal = document.querySelector('.parent-modal-overlay:not([style*="display: none"])');
+      const activeJukebox = document.querySelector('.toddler-jukebox-container:not([style*="display: none"])');
+      return !!activeModal || !!activeJukebox;
     };
 
-    // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal
+    // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal & jukebox
     window.addEventListener('touchstart', (e) => {
       const target = e.target as HTMLElement | null;
-      if (isModalOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap'))) {
-        return; // Allow touch in modal
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .floating-jukebox-btn, .toddler-jukebox-container'))) {
+        return; // Allow touch in modal / jukebox
       }
       if (e.touches.length > 1) {
         // Allow toddler multi-touch in app, but prevent browser zoom
@@ -169,9 +220,9 @@ class ToddlerStorybookApp {
     }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
-      // Allow native finger scrolling inside the parent modal
+      // Allow native finger scrolling inside the parent modal or jukebox grid
       const target = e.target as HTMLElement | null;
-      if (isModalOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap'))) {
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .toddler-jukebox-container, .jukebox-grid-view'))) {
         return; // Allow native finger scrolling
       }
       // Prevent pull-to-refresh and window bouncing on toddler storybook screen
@@ -181,7 +232,7 @@ class ToddlerStorybookApp {
     // Global multi-touch burst reaction: Any tap or slap anywhere spawns sparkles!
     window.addEventListener('pointerdown', (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap')) {
+      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .floating-jukebox-btn, .toddler-jukebox-container')) {
         return;
       }
       // Sparkle if tapping empty scene background

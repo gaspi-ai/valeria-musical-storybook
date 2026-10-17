@@ -1,0 +1,923 @@
+/**
+ * jukebox.css
+ * Visual Styling for Valeria's Toddler Jukebox & Fullscreen Animated Theater.
+ * Mobile-First: iPhone 12 Pro (390 x 844 viewport, safe-area aware).
+ */
+
+/* ==========================================================================
+   1. FLOATING JUKEBOX ENTRY BUTTON (Main Storybook Screen)
+   ========================================================================== */
+.floating-jukebox-btn {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  left: calc(14px + var(--safe-left));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #EC4899 0%, #8B5CF6 100%);
+  color: #FFFFFF;
+  border: 3px solid #FDF2F8;
+  border-radius: 30px;
+  padding: 8px 16px;
+  font-family: var(--font-storybook);
+  font-size: clamp(0.85rem, 3.2vw, 1.05rem);
+  font-weight: 900;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 100;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.floating-jukebox-btn:active {
+  transform: scale(0.92);
+}
+
+.floating-jukebox-btn .btn-note-icon {
+  font-size: 1.3rem;
+  animation: noteHop 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes noteHop {
+  0% { transform: translateY(0) rotate(-8deg); }
+  100% { transform: translateY(-4px) rotate(12deg); }
+}
+
+/* ==========================================================================
+   2. JUKEBOX CONTAINER & SELECTION VIEW
+   ========================================================================== */
+.toddler-jukebox-container {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  z-index: 1500;
+  background: linear-gradient(180deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+  color: #FFFFFF;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.jukebox-grid-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: calc(10px + var(--safe-top));
+  padding-bottom: calc(20px + var(--safe-bottom));
+  padding-left: calc(12px + var(--safe-left));
+  padding-right: calc(12px + var(--safe-right));
+}
+
+/* Header */
+.jukebox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 6px 14px 6px;
+  width: 100%;
+}
+
+.jukebox-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  color: #FFFFFF;
+  border-radius: 25px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.jukebox-back-btn:active {
+  transform: scale(0.92);
+}
+
+.jukebox-title-wrap {
+  text-align: center;
+}
+
+.jukebox-title {
+  font-size: clamp(1.2rem, 4.5vw, 1.6rem);
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.jukebox-subtitle {
+  font-size: 0.75rem;
+  color: #C7D2FE;
+  font-weight: 600;
+}
+
+.jukebox-header-spacer {
+  width: 90px;
+}
+
+/* 6-Card Grid (min 140px x 140px touch targets) */
+.jukebox-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 6px 0 24px 0;
+}
+
+@media (min-width: 560px) {
+  .jukebox-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+}
+
+.song-card {
+  position: relative;
+  min-height: 160px;
+  background: linear-gradient(145deg, var(--song-color), rgba(0, 0, 0, 0.35));
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  border-radius: 26px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), inset 0 2px 6px rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  touch-action: manipulation;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.song-card.squash-bounce {
+  animation: cardSquash 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cardSquash {
+  0% { transform: scale(1, 1); }
+  35% { transform: scale(0.9, 1.14); }
+  65% { transform: scale(1.12, 0.92); }
+  100% { transform: scale(1, 1); }
+}
+
+.song-card-aura {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 90px;
+  height: 90px;
+  background: radial-gradient(circle, var(--song-accent) 0%, transparent 70%);
+  opacity: 0.45;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.song-card-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.song-card-icon {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+}
+
+.song-card-musical-note {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  font-size: 1.2rem;
+  animation: floatNote 2s ease-in-out infinite alternate;
+}
+
+@keyframes floatNote {
+  0% { transform: translateY(0); opacity: 0.7; }
+  100% { transform: translateY(-8px); opacity: 1; }
+}
+
+.song-card-info {
+  text-align: center;
+  margin: 6px 0;
+}
+
+.song-card-title {
+  font-size: clamp(0.95rem, 3.2vw, 1.15rem);
+  font-weight: 900;
+  line-height: 1.15;
+  color: #FFFFFF;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.song-card-subtitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--song-accent);
+  display: block;
+  margin-top: 3px;
+}
+
+.song-card-badge {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1E1B4B;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   3. FULLSCREEN THEATER MODE (100dvh x 100dvw)
+   ========================================================================== */
+.jukebox-theater-view {
+  position: fixed;
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+  z-index: 1600;
+  overflow: hidden;
+  touch-action: none;
+  background: #111827;
+}
+
+.theater-lottie-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.theater-interactive-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.theater-particle-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* Discreet Parent Exit Button (Top-Right, 2s Hold / Double-Tap) */
+.theater-discreet-exit-wrap {
+  position: absolute;
+  top: calc(14px + var(--safe-top));
+  right: calc(16px + var(--safe-right));
+  z-index: 50;
+  pointer-events: auto;
+}
+
+.theater-exit-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exit-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.exit-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 4;
+}
+
+.exit-ring-progress {
+  fill: none;
+  stroke: #F43F5E;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.05s linear;
+}
+
+.exit-icon-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.exit-icon {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #FFFFFF;
+}
+
+.exit-label {
+  font-size: 0.55rem;
+  font-weight: 900;
+  color: #FECDD3;
+  margin-top: 1px;
+}
+
+/* Stage Pulse on Beat Drop */
+.beat-pulse {
+  animation: stageBeatPulse 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes stageBeatPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   4. SONG STAGE 1: "I LOVE YOU MOMMY" (Skidamarink)
+   ========================================================================== */
+.stage-mommy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #F472B6 0%, #DB2777 60%, #831843 100%);
+}
+
+.mommy-tree-canopy {
+  position: absolute;
+  top: calc(20px + var(--safe-top));
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  font-size: 2.2rem;
+  pointer-events: none;
+}
+
+.bears-duo-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  cursor: pointer;
+  margin-top: 40px;
+}
+
+.mama-bear {
+  position: relative;
+  width: clamp(140px, 34vw, 190px);
+  height: clamp(150px, 36vw, 200px);
+  background: #92400E;
+  border: 5px solid #78350F;
+  border-radius: 50% 50% 40% 40%;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.mama-bear .bear-ear {
+  position: absolute;
+  top: -14px;
+  width: 36px;
+  height: 36px;
+  background: #78350F;
+  border-radius: 50%;
+}
+.mama-bear .bear-ear.left { left: 10px; }
+.mama-bear .bear-ear.right { right: 10px; }
+
+.mama-bear .bear-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.mama-bear .bear-eye {
+  position: absolute;
+  top: 42px;
+  width: 12px;
+  height: 14px;
+  background: #1E293B;
+  border-radius: 50%;
+}
+.mama-bear .bear-eye.left { left: 32px; }
+.mama-bear .bear-eye.right { right: 32px; }
+
+.mama-bear .bear-muzzle {
+  position: absolute;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 38px;
+  background: #FDE68A;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mama-bear .bear-nose {
+  width: 20px;
+  height: 14px;
+  background: #1E293B;
+  border-radius: 10px;
+}
+
+.mama-bear .bear-blush {
+  position: absolute;
+  top: 60px;
+  width: 18px;
+  height: 10px;
+  background: rgba(244, 63, 94, 0.5);
+  border-radius: 50%;
+}
+.mama-bear .bear-blush.left { left: 16px; }
+.mama-bear .bear-blush.right { right: 16px; }
+
+.baby-bear {
+  position: relative;
+  width: clamp(90px, 22vw, 120px);
+  height: clamp(100px, 24vw, 130px);
+  background: #B45309;
+  border: 4px solid #78350F;
+  border-radius: 50% 50% 40% 40%;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.baby-bear .baby-ear {
+  position: absolute;
+  top: -10px;
+  width: 24px;
+  height: 24px;
+  background: #78350F;
+  border-radius: 50%;
+}
+.baby-bear .baby-ear.left { left: 8px; }
+.baby-bear .baby-ear.right { right: 8px; }
+
+.baby-bear .baby-eye {
+  position: absolute;
+  top: 28px;
+  width: 9px;
+  height: 10px;
+  background: #1E293B;
+  border-radius: 50%;
+}
+.baby-bear .baby-eye.left { left: 22px; }
+.baby-bear .baby-eye.right { right: 22px; }
+
+.baby-bear .baby-muzzle {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 26px;
+  background: #FDE68A;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.baby-bear .baby-nose {
+  width: 14px;
+  height: 9px;
+  background: #1E293B;
+  border-radius: 8px;
+}
+
+.floating-hearts-stream {
+  position: absolute;
+  bottom: calc(75px + var(--safe-bottom));
+  display: flex;
+  gap: 24px;
+  font-size: 2rem;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   5. SONG STAGE 2: "YOU ARE MY SUNSHINE"
+   ========================================================================== */
+.stage-sunshine {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #FEF08A 0%, #FBBF24 50%, #D97706 100%);
+}
+
+.sun-character-wrap {
+  position: relative;
+  width: clamp(160px, 45vw, 220px);
+  height: clamp(160px, 45vw, 220px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sun-rays-rotator {
+  position: absolute;
+  width: 130%;
+  height: 130%;
+  animation: sunRotate 20s linear infinite;
+}
+
+@keyframes sunRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sun-rays-rotator .ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 48px;
+  background: #F59E0B;
+  border-radius: 8px;
+  transform-origin: center -30px;
+}
+.ray.r1 { transform: rotate(0deg) translate(-50%, -100%); }
+.ray.r2 { transform: rotate(45deg) translate(-50%, -100%); }
+.ray.r3 { transform: rotate(90deg) translate(-50%, -100%); }
+.ray.r4 { transform: rotate(135deg) translate(-50%, -100%); }
+.ray.r5 { transform: rotate(180deg) translate(-50%, -100%); }
+.ray.r6 { transform: rotate(225deg) translate(-50%, -100%); }
+.ray.r7 { transform: rotate(270deg) translate(-50%, -100%); }
+.ray.r8 { transform: rotate(315deg) translate(-50%, -100%); }
+
+.sun-main-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, #FDE047 30%, #EAB308 90%);
+  border: 6px solid #CA8A04;
+  border-radius: 50%;
+  box-shadow: 0 14px 35px rgba(202, 138, 4, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.sun-cool-sunglasses {
+  display: flex;
+  align-items: center;
+  margin-top: -10px;
+}
+.sun-cool-sunglasses .lens {
+  width: 42px;
+  height: 32px;
+  background: #0F172A;
+  border-radius: 12px 12px 24px 24px;
+  border: 3px solid #334155;
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.3);
+}
+.sun-cool-sunglasses .glasses-bridge {
+  width: 14px;
+  height: 5px;
+  background: #334155;
+}
+
+.sun-bright-smile {
+  width: 48px;
+  height: 24px;
+  border-bottom: 5px solid #78350F;
+  border-radius: 0 0 24px 24px;
+  margin-top: 8px;
+}
+
+.sunflowers-row {
+  position: absolute;
+  bottom: calc(45px + var(--safe-bottom));
+  width: 90%;
+  display: flex;
+  justify-content: space-around;
+  font-size: 2.8rem;
+  pointer-events: none;
+}
+
+.swaying-sunflower {
+  animation: sunflowerSway 2.4s ease-in-out infinite alternate;
+}
+.sf-2 { animation-delay: 0.6s; }
+.sf-3 { animation-delay: 1.2s; }
+
+@keyframes sunflowerSway {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(8deg); }
+}
+
+/* ==========================================================================
+   6. SONG STAGE 3: "FIVE LITTLE MONKEYS"
+   ========================================================================== */
+.stage-monkeys {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #065F46 0%, #047857 50%, #064E3B 100%);
+}
+
+.monkeys-bedroom {
+  position: relative;
+  width: clamp(280px, 85vw, 420px);
+  height: clamp(260px, 50vh, 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.bed-mattress {
+  width: 100%;
+  height: 70px;
+  background: repeating-linear-gradient(90deg, #38BDF8 0px, #38BDF8 25px, #FFFFFF 25px, #FFFFFF 50px);
+  border: 5px solid #0284C7;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.jumping-monkeys-layer {
+  position: absolute;
+  bottom: 80px;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+
+.jumping-monkey {
+  position: relative;
+  width: 60px;
+  height: 75px;
+  cursor: pointer;
+  animation: monkeyJump 0.65s cubic-bezier(0.25, 1, 0.5, 1) infinite alternate;
+}
+.m-2 { animation-delay: 0.22s; }
+.m-3 { animation-delay: 0.44s; }
+
+@keyframes monkeyJump {
+  0% { transform: translateY(0) scale(1.1, 0.9); }
+  100% { transform: translateY(-70px) scale(0.9, 1.15); }
+}
+
+.jumping-monkey.backflip {
+  animation: monkeyFlip 0.7s ease-in-out forwards !important;
+}
+
+@keyframes monkeyFlip {
+  0% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-110px) rotate(180deg) scale(1.2); }
+  100% { transform: translateY(0) rotate(360deg); }
+}
+
+.jumping-monkey .m-head {
+  width: 48px;
+  height: 44px;
+  background: #92400E;
+  border: 3px solid #78350F;
+  border-radius: 50%;
+  position: relative;
+  margin: 0 auto;
+}
+
+.jumping-monkey .m-mouth {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 14px;
+  background: #FED7AA;
+  border-radius: 50%;
+}
+
+/* ==========================================================================
+   7. SONG STAGE 4: "TWINKLE TWINKLE"
+   ========================================================================== */
+.stage-twinkle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #1E1B4B 0%, #0F172A 60%, #020617 100%);
+}
+
+.main-hero-star {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.star-sparkle-center {
+  font-size: 5rem;
+  filter: drop-shadow(0 0 25px #FDE047);
+  animation: heroStarTwinkle 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes heroStarTwinkle {
+  0% { transform: scale(0.92); opacity: 0.85; }
+  100% { transform: scale(1.18); opacity: 1; filter: drop-shadow(0 0 45px #FEF08A); }
+}
+
+.crescent-moon-glow {
+  position: absolute;
+  top: calc(25px + var(--safe-top));
+  right: calc(30px + var(--safe-right));
+  font-size: 3rem;
+}
+
+/* ==========================================================================
+   8. SONG STAGE 5: "OLD MACDONALD"
+   ========================================================================== */
+.stage-farm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 35%, #74C69D 0%, #52B788 50%, #2D6A4F 100%);
+}
+
+.singing-animals-trio {
+  display: flex;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.singing-cow, .singing-sheep, .singing-duck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  animation: animalBob 0.8s ease-in-out infinite alternate;
+}
+.singing-sheep { animation-delay: 0.25s; }
+.singing-duck { animation-delay: 0.5s; }
+
+@keyframes animalBob {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-16px); }
+}
+
+.animal-avatar {
+  font-size: 3.5rem;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.25));
+}
+
+.note-bubble {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1E293B;
+  font-size: 0.75rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   9. SONG STAGE 6: "ROCK-A-BYE BABY"
+   ========================================================================== */
+.stage-lullaby {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #312E81 0%, #1E1B4B 65%, #0F172A 100%);
+}
+
+.hanging-cradle {
+  position: relative;
+  width: clamp(140px, 40vw, 200px);
+  height: clamp(110px, 30vw, 150px);
+  background: #78350F;
+  border: 5px solid #582F0E;
+  border-radius: 0 0 50px 50px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transform-origin: top center;
+  animation: cradleRock 3.2s ease-in-out infinite alternate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes cradleRock {
+  0% { transform: rotate(-16deg); }
+  100% { transform: rotate(16deg); }
+}
+
+.baby-face-peek {
+  font-size: 2.8rem;
+}
+
+.cradle-stars-carving {
+  font-size: 0.85rem;
+  color: #FDE68A;
+  margin-top: 4px;
+}
+
+/* Celebration Overlay */
+.theater-celebration-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.celebration-card {
+  background: #FFFFFF;
+  color: #1E1B4B;
+  border-radius: 28px;
+  padding: 24px 32px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.celebration-icon {
+  font-size: 2.5rem;
+}
+
+.celebration-card h2 {
+  font-size: 1.4rem;
+  font-weight: 900;
+  margin: 8px 0;
+  color: #DB2777;
+}
+
+.celebration-card p {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4B5563;
+}
