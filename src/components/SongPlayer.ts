@@ -61,73 +61,73 @@ export class SongPlayer {
       bpm: 108,
       meter: '4/4',
       lottieFile: '/animations/mommy_lottie.json',
-      audioFile: '/audio/songs/mommy.wav',
-      durationSec: 37.1
+      audioFile: 'songs/mommy.mp3',
+      durationSec: 25.0
     },
     {
       id: 'sunshine',
       title: 'You Are My Sunshine',
-      subtitle: 'Acoustic Folk Ukulele',
+      subtitle: 'Acoustic Folk Sing-Along',
       icon: '☀️',
       themeColor: '#FFAA00',
       accentColor: '#FFF3B0',
       bpm: 114,
       meter: '4/4',
       lottieFile: '/animations/sunshine_lottie.json',
-      audioFile: '/audio/songs/sunshine.wav',
-      durationSec: 35.2
+      audioFile: 'songs/sunshine.mp3',
+      durationSec: 45.0
     },
     {
       id: 'twinkle',
       title: 'Twinkle, Twinkle, Little Star',
-      subtitle: 'Music Box & Harp Lullaby',
+      subtitle: 'Gentle Vocal Lullaby',
       icon: '⭐',
       themeColor: '#4361EE',
       accentColor: '#C084FC',
       bpm: 88,
       meter: '4/4',
       lottieFile: '/animations/twinkle_lottie.json',
-      audioFile: '/audio/songs/twinkle.wav',
-      durationSec: 34.7
+      audioFile: 'songs/twinkle.mp3',
+      durationSec: 42.0
     },
     {
       id: 'monkeys',
       title: 'Five Little Monkeys',
-      subtitle: 'Bouncy Bedtime Ragtime',
+      subtitle: 'Playful Bedtime Sing-Along',
       icon: '🐒',
       themeColor: '#10B981',
       accentColor: '#A7F3D0',
       bpm: 126,
       meter: '4/4',
       lottieFile: '/animations/monkeys_lottie.json',
-      audioFile: '/audio/songs/monkeys.wav',
-      durationSec: 32.0
+      audioFile: 'songs/monkeys.mp3',
+      durationSec: 35.0
     },
     {
       id: 'old_macdonald',
       title: 'Old MacDonald',
-      subtitle: 'Acoustic Banjo & Animals',
+      subtitle: 'Sing-Along Animals & Farm',
       icon: '🚜',
       themeColor: '#D97706',
       accentColor: '#FDE68A',
       bpm: 112,
       meter: '4/4',
       lottieFile: '/animations/farm_lottie.json',
-      audioFile: '/audio/songs/old_macdonald.wav',
-      durationSec: 35.8
+      audioFile: 'songs/old_macdonald.mp3',
+      durationSec: 38.0
     },
     {
       id: 'rock_a_bye',
       title: 'Rock-a-Bye Baby',
-      subtitle: 'Gentle Treetop Celesta',
+      subtitle: 'Soothing Vocal Lullaby',
       icon: '🌙',
       themeColor: '#6366F1',
       accentColor: '#E0E7FF',
       bpm: 76,
       meter: '6/8',
       lottieFile: '/animations/lullaby_lottie.json',
-      audioFile: '/audio/songs/rock_a_bye.wav',
-      durationSec: 40.4
+      audioFile: 'songs/rock_a_bye.mp3',
+      durationSec: 40.0
     }
   ];
 
@@ -196,7 +196,8 @@ export class SongPlayer {
 
     if (this.audioEl) {
       try {
-        this.audioEl.src = targetSong.audioFile;
+        const resolvedUrl = this.engine.resolveAudioPath(targetSong.audioFile);
+        this.audioEl.src = resolvedUrl;
         this.audioEl.currentTime = 0;
         await this.audioEl.play();
         this.isPlaying = true;
@@ -253,7 +254,10 @@ export class SongPlayer {
   public stop(): void {
     this.pause();
     if (this.audioEl) {
+      this.audioEl.pause();
       this.audioEl.currentTime = 0;
+      this.audioEl.removeAttribute('src');
+      this.audioEl.load();
     }
     this.currentSong = null;
     this.lastDispatchedBeat = -1;

@@ -317,6 +317,7 @@ export class SongsJukebox {
   public closeJukebox(): void {
     this.isJukeboxOpen = false;
     this.closeTheaterMode();
+    this.engine.stopAllAudio();
     this.element.style.display = 'none';
   }
 
@@ -359,6 +360,7 @@ export class SongsJukebox {
   public closeTheaterMode(): void {
     this.isTheaterActive = false;
     this.player.stop();
+    this.engine.stopAllAudio();
 
     if (this.beatCleanup) {
       this.beatCleanup();

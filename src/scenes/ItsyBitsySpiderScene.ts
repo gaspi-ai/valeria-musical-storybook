@@ -36,6 +36,10 @@ export class ItsyBitsySpiderScene implements StorybookScene {
   private flowerBedEl!: HTMLElement;
 
   // State
+  private isActive: boolean = false;
+  private activeTimeouts: Set<number> = new Set();
+  private vocalAudio: HTMLAudioElement | null = null;
+  private isVocalPlaying: boolean = false;
   private spiderStepIndex: number = 0; // 0 (bottom in flower bed) to 7 (top of spout)
   private isRaining: boolean = false;
   private isWashingDown: boolean = false;
@@ -51,6 +55,22 @@ export class ItsyBitsySpiderScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts.clear();
   }
 
   private render(): void {
@@ -175,6 +195,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
 
       <!-- Toddler Bottom Quick Tappers -->
       <div class="spider-toddler-bar">
+        <button class="spider-quick-btn btn-sing-vocal" id="btn-spider-sing" data-action="sing">🎶 SING</button>
         <button class="spider-quick-btn btn-climb" data-action="climb">🕷️ CLIMB UP</button>
         <button class="spider-quick-btn btn-rain" data-action="rain">🌧️ DOWN CAME RAIN</button>
         <button class="spider-quick-btn btn-sun" data-action="sun">☀️ OUT CAME SUN</button>
@@ -229,7 +250,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
       const flowers = this.flowerBedEl.querySelectorAll('.spider-flower');
       flowers.forEach(f => {
         f.classList.add('flower-bounce');
-        setTimeout(() => f.classList.remove('flower-bounce'), 600);
+        this.safeTimeout(() => f.classList.remove('flower-bounce'), 600);
       });
     });
 
@@ -240,7 +261,8 @@ export class ItsyBitsySpiderScene implements StorybookScene {
         e.stopPropagation();
         const pEvt = e as PointerEvent;
         const act = (btn as HTMLElement).getAttribute('data-action');
-        if (act === 'climb') this.climbStep(pEvt.clientX, pEvt.clientY);
+        if (act === 'sing') this.toggleVocalSong();
+        else if (act === 'climb') this.climbStep(pEvt.clientX, pEvt.clientY);
         else if (act === 'rain') this.triggerRain(pEvt.clientX, pEvt.clientY);
         else if (act === 'sun') this.triggerSun(pEvt.clientX, pEvt.clientY);
       });
@@ -248,6 +270,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     this.spiderStepIndex = 0;
     this.updateSpiderPosition(false);
@@ -255,11 +278,53 @@ export class ItsyBitsySpiderScene implements StorybookScene {
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
+    this.clearAllTimeouts();
     this.stopRain();
+    this.stopVocalSong();
     if (this.guitarStrumTimer !== null) {
       clearTimeout(this.guitarStrumTimer);
       this.guitarStrumTimer = null;
+    }
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  private startVocalSong(): void {
+    this.stopVocalSong();
+    const btn = this.element.querySelector('#btn-spider-sing') as HTMLElement;
+    if (btn) btn.classList.add('active');
+
+    try {
+      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/itsy_bitsy.mp3'));
+      this.vocalAudio.volume = 0.95;
+      this.isVocalPlaying = true;
+      this.vocalAudio.play().catch(e => console.warn('Itsy bitsy vocal song play warning:', e));
+      this.vocalAudio.onended = () => {
+        this.stopVocalSong();
+      };
+    } catch (e) {
+      console.warn('Could not start vocal song:', e);
+    }
+  }
+
+  private stopVocalSong(): void {
+    this.isVocalPlaying = false;
+    const btn = this.element.querySelector('#btn-spider-sing') as HTMLElement;
+    if (btn) btn.classList.remove('active');
+    if (this.vocalAudio) {
+      this.vocalAudio.pause();
+      this.vocalAudio.currentTime = 0;
+      this.vocalAudio.removeAttribute('src');
+      this.vocalAudio.load();
+      this.vocalAudio = null;
     }
   }
 
@@ -268,7 +333,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
    * Plays ascending pentatonic marimba / nylon guitar scale!
    */
   public climbStep(cx: number, cy: number): void {
-    if (this.isWashingDown) return;
+    if (!this.isActive || this.isWashingDown) return;
 
     if (this.spiderStepIndex < this.climbNotes.length - 1) {
       this.spiderStepIndex++;
@@ -277,6 +342,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
       this.engine.playSound('fanfare.mp3', { volume: 0.7 });
       this.bursts.spawnStarGlow(cx || window.innerWidth * 0.5, cy || window.innerHeight * 0.25, 16, '#FFD166');
       this.spiderStepIndex = 0;
+      this.engine.playVoice('voice_spider_climb.wav', 'The itsy bitsy spider climbed up the water spout!', 0.9);
     }
 
     const note = this.climbNotes[this.spiderStepIndex];
@@ -304,7 +370,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
    * Rain Cloud: "Down came the rain, and washed the spider out!"
    */
   public triggerRain(cx: number, cy: number): void {
-    if (this.isRaining) return;
+    if (!this.isActive || this.isRaining) return;
     this.isRaining = true;
 
     // Darken sky to rainy blue-grey
@@ -312,34 +378,39 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     this.skyEl.classList.add('rainy');
     this.cloudEl.classList.add('cloud-shaking');
 
+    // Spoken voice cue
+    this.engine.playVoice('voice_spider_rain.wav', 'Down came the rain and washed the spider out!', 0.9);
+
     // Soft acoustic rain trickle loop
     this.engine.playAmbientSound('rain.ogg', 0.45);
     this.bursts.spawnWaterSplash(cx || window.innerWidth * 0.3, cy || window.innerHeight * 0.25, 14);
 
     // Cascading rain particles
     const rainWrap = this.element.querySelector('#cloud-rain-drops') as HTMLElement;
-    rainWrap.innerHTML = '';
-    for (let i = 0; i < 9; i++) {
-      const drop = document.createElement('div');
-      drop.className = 'rain-drop-item';
-      drop.style.left = `${10 + i * 9}%`;
-      drop.style.animationDelay = `${i * 0.07}s`;
-      rainWrap.appendChild(drop);
+    if (rainWrap) {
+      rainWrap.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'rain-drop-item';
+        drop.style.left = `${10 + i * 9}%`;
+        drop.style.animationDelay = `${i * 0.07}s`;
+        rainWrap.appendChild(drop);
+      }
     }
 
     // Rush of water washes spider down the spout!
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.triggerSpoutWashDown();
     }, 600);
 
     // Rain clears after a few seconds
-    this.rainTimer = window.setTimeout(() => {
+    this.rainTimer = this.safeTimeout(() => {
       this.stopRain();
     }, 4500);
   }
 
   private triggerSpoutWashDown(): void {
-    if (this.isWashingDown) return;
+    if (!this.isActive || this.isWashingDown) return;
     this.isWashingDown = true;
 
     // Rushing water visual down spout
@@ -347,7 +418,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
 
     // Slide whistle falling sound + bubble pop!
     this.engine.playSound('slide_whistle.mp3', { volume: 0.85 });
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.engine.playSound('bubbles.ogg', { volume: 0.8 });
       this.engine.playSound('splash.mp3', { volume: 0.7, pitch: 1.1 });
     }, 700);
@@ -360,7 +431,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     const spiderRect = this.spiderEl.getBoundingClientRect();
     this.bursts.spawnWaterSplash(spiderRect.left + 25, spiderRect.top + 25, 16);
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.spoutWaterEl.classList.remove('water-cascading');
       this.spiderEl.classList.remove('spider-washed-down');
       this.isWashingDown = false;
@@ -383,16 +454,20 @@ export class ItsyBitsySpiderScene implements StorybookScene {
    * Sun: "Out came the sun and dried up all the rain!"
    */
   public triggerSun(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.stopRain();
 
     // Brighten sky
     this.skyEl.classList.remove('rainy');
     this.skyEl.classList.add('sunny');
 
+    // Spoken voice cue
+    this.engine.playVoice('voice_spider_sun.wav', 'Out came the sun and dried up all the rain!', 0.9);
+
     // Warm acoustic guitar chord & smiling sun chime
     this.engine.playSound('chime.mp3', { volume: 0.8, pitch: 1.05 });
     this.engine.playInstrumentNote('nylon_guitar', 'C4', { volume: 0.65 });
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.engine.playInstrumentNote('nylon_guitar', 'G4', { volume: 0.6 });
       this.engine.playInstrumentNote('nylon_guitar', 'C5', { volume: 0.6 });
     }, 120);
@@ -407,14 +482,16 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     this.spiderEl.classList.remove('spider-wiggle-dry');
     void this.spiderEl.offsetWidth;
     this.spiderEl.classList.add('spider-wiggle-dry');
-    setTimeout(() => this.spiderEl.classList.remove('spider-wiggle-dry'), 1000);
+    this.safeTimeout(() => this.spiderEl.classList.remove('spider-wiggle-dry'), 1000);
   }
 
   private playAcousticNylonGuitarStrum(): void {
     const chord = ['C4', 'E4', 'G4', 'C5'];
     chord.forEach((n, idx) => {
-      setTimeout(() => {
-        this.engine.playInstrumentNote('nylon_guitar', n, { volume: 0.4 });
+      this.safeTimeout(() => {
+        if (this.isActive) {
+          this.engine.playInstrumentNote('nylon_guitar', n, { volume: 0.4 });
+        }
       }, idx * 60);
     });
   }

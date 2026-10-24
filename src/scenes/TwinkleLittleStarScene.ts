@@ -61,6 +61,11 @@ export class TwinkleLittleStarScene implements StorybookScene {
   private currentInstrument: 'glock' | 'celesta' | 'musicbox' = 'celesta';
 
   // State
+  private isActive: boolean = false;
+  private activeTimeouts: Set<number> = new Set();
+  private zzzInterval: number | null = null;
+  private vocalAudio: HTMLAudioElement | null = null;
+  private isVocalPlaying: boolean = false;
   private lastDragNoteTime: number = 0;
   private isDraggingConstellation: boolean = false;
   private lullabyTimer: number | null = null;
@@ -73,6 +78,22 @@ export class TwinkleLittleStarScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts.clear();
   }
 
   private render(): void {
@@ -115,8 +136,12 @@ export class TwinkleLittleStarScene implements StorybookScene {
 
       <!-- Toddler Bottom Quick Tappers -->
       <div class="twinkle-toddler-bar">
+        <button class="twinkle-quick-btn btn-sing-vocal" id="btn-toggle-sing">
+          <span class="btn-icon">🌟</span>
+          <span class="btn-text">SING 🎶</span>
+        </button>
         <button class="twinkle-quick-btn btn-lullaby" id="btn-toggle-lullaby">
-          <span class="btn-icon">🎶</span>
+          <span class="btn-icon">🔔</span>
           <span class="btn-text">LULLABY</span>
         </button>
         <button class="twinkle-quick-btn btn-inst ${this.currentInstrument === 'celesta' ? 'active' : ''}" data-inst="celesta">
@@ -231,23 +256,89 @@ export class TwinkleLittleStarScene implements StorybookScene {
       e.stopPropagation();
       this.toggleLullaby();
     });
+
+    // Real vocal singing toggle button
+    const singBtn = this.element.querySelector('#btn-toggle-sing') as HTMLElement;
+    singBtn.addEventListener('pointerdown', (e: Event) => {
+      e.stopPropagation();
+      this.toggleVocalSong();
+    });
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     this.startZzzLoop();
     this.playInitialBellChime();
+
+    // Spoken voice welcome
+    this.safeTimeout(() => {
+      if (this.isActive) {
+        this.engine.playVoice('voice_twinkle_wish.wav', 'Twinkle twinkle, make a wish!', 0.85);
+      }
+    }, 1200);
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
+    this.clearAllTimeouts();
+    if (this.zzzInterval !== null) {
+      clearInterval(this.zzzInterval);
+      this.zzzInterval = null;
+    }
     this.stopLullaby();
+    this.stopVocalSong();
+    this.fadeConstellationCanvas();
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  private startVocalSong(): void {
+    this.stopVocalSong();
+    this.stopLullaby();
+
+    const btn = this.element.querySelector('#btn-toggle-sing') as HTMLElement;
+    if (btn) btn.classList.add('active');
+
+    try {
+      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/twinkle.mp3'));
+      this.vocalAudio.volume = 0.95;
+      this.isVocalPlaying = true;
+      this.vocalAudio.play().catch(e => console.warn('Twinkle vocal song play warning:', e));
+      this.vocalAudio.onended = () => {
+        this.stopVocalSong();
+      };
+    } catch (e) {
+      console.warn('Could not start vocal song:', e);
+    }
+  }
+
+  private stopVocalSong(): void {
+    this.isVocalPlaying = false;
+    const btn = this.element.querySelector('#btn-toggle-sing') as HTMLElement;
+    if (btn) btn.classList.remove('active');
+    if (this.vocalAudio) {
+      this.vocalAudio.pause();
+      this.vocalAudio.currentTime = 0;
+      this.vocalAudio.removeAttribute('src');
+      this.vocalAudio.load();
+      this.vocalAudio = null;
+    }
   }
 
   /**
    * Taps an individual star: expanding halo, star glow burst, and authentic chime note.
    */
   public triggerStar(star: StarNode, cx: number, cy: number): void {
+    if (!this.isActive) return;
+
     // Play real acoustic note via polyphonic AudioEngine voice
     this.engine.playInstrumentNote(this.currentInstrument as InstrumentType, star.note, {
       volume: 0.85
@@ -258,7 +349,7 @@ export class TwinkleLittleStarScene implements StorybookScene {
       star.element.classList.remove('star-illuminated');
       void star.element.offsetWidth;
       star.element.classList.add('star-illuminated');
-      setTimeout(() => star.element?.classList.remove('star-illuminated'), 1200);
+      this.safeTimeout(() => star.element?.classList.remove('star-illuminated'), 1200);
     }
 
     // Radiant celestial star particles
@@ -270,6 +361,8 @@ export class TwinkleLittleStarScene implements StorybookScene {
    * Plays gentle bell arpeggio and draws sparkling golden dust!
    */
   private handleConstellationDrag(x: number, y: number): void {
+    if (!this.isActive) return;
+
     const now = Date.now();
     if (now - this.lastDragNoteTime > 150) {
       this.lastDragNoteTime = now;
@@ -297,7 +390,7 @@ export class TwinkleLittleStarScene implements StorybookScene {
       this.constellationCtx.fillStyle = 'rgba(11, 8, 38, 0.15)';
       this.constellationCtx.fillRect(0, 0, window.innerWidth, window.innerHeight);
       fadeFrames++;
-      if (fadeFrames < 15) {
+      if (fadeFrames < 15 && this.isActive) {
         requestAnimationFrame(fade);
       } else {
         this.constellationCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -310,6 +403,8 @@ export class TwinkleLittleStarScene implements StorybookScene {
    * Sleeping Moon: Plays gentle snore loop and blows floating Zzz bubbles!
    */
   public triggerMoon(cx: number, cy: number): void {
+    if (!this.isActive) return;
+
     this.engine.playSound('snore.mp3', { volume: 0.8 });
     this.engine.playSound('chime.mp3', { volume: 0.5, pitch: 1.2 });
     this.bursts.spawnBurst(cx, cy, 12, '#9D4EDD');
@@ -322,7 +417,11 @@ export class TwinkleLittleStarScene implements StorybookScene {
   }
 
   private spawnZzzBubble(_x?: number, _y?: number): void {
+    if (!this.isActive) return;
+
     const zzzWrap = this.element.querySelector('#moon-zzz') as HTMLElement;
+    if (!zzzWrap) return;
+
     const bubble = document.createElement('div');
     bubble.className = 'zzz-bubble';
     bubble.innerText = 'Zzz';
@@ -337,12 +436,15 @@ export class TwinkleLittleStarScene implements StorybookScene {
     });
 
     zzzWrap.appendChild(bubble);
-    setTimeout(() => bubble.remove(), 4000);
+    this.safeTimeout(() => bubble.remove(), 4000);
   }
 
   private startZzzLoop(): void {
-    setInterval(() => {
-      if (this.element.style.display !== 'none') {
+    if (this.zzzInterval !== null) {
+      clearInterval(this.zzzInterval);
+    }
+    this.zzzInterval = window.setInterval(() => {
+      if (this.isActive && this.element.style.display !== 'none') {
         const moonRect = this.moonEl.getBoundingClientRect();
         this.spawnZzzBubble(moonRect.left + 40, moonRect.top);
       }
@@ -361,6 +463,7 @@ export class TwinkleLittleStarScene implements StorybookScene {
   }
 
   private startLullaby(): void {
+    this.stopVocalSong();
     this.isLullabyPlaying = true;
     const btn = this.element.querySelector('#btn-toggle-lullaby') as HTMLElement;
     if (btn) btn.classList.add('active');
@@ -374,7 +477,7 @@ export class TwinkleLittleStarScene implements StorybookScene {
     let step = 0;
 
     const playNext = () => {
-      if (!this.isLullabyPlaying) return;
+      if (!this.isLullabyPlaying || !this.isActive) return;
 
       const note = melody[step % melody.length];
       this.engine.playInstrumentNote(this.currentInstrument as InstrumentType, note, {
@@ -385,11 +488,11 @@ export class TwinkleLittleStarScene implements StorybookScene {
       const matchedStar = this.stars.find(s => s.note === note);
       if (matchedStar && matchedStar.element) {
         matchedStar.element.classList.add('star-illuminated');
-        setTimeout(() => matchedStar.element?.classList.remove('star-illuminated'), 900);
+        this.safeTimeout(() => matchedStar.element?.classList.remove('star-illuminated'), 900);
       }
 
       step++;
-      this.lullabyTimer = window.setTimeout(playNext, 1000); // 60 BPM lullaby pace
+      this.lullabyTimer = this.safeTimeout(playNext, 1000); // 60 BPM lullaby pace
     };
 
     playNext();
@@ -408,8 +511,10 @@ export class TwinkleLittleStarScene implements StorybookScene {
   private playInitialBellChime(): void {
     const arpeggio = ['C5', 'E5', 'G5', 'C6'];
     arpeggio.forEach((n, idx) => {
-      setTimeout(() => {
-        this.engine.playInstrumentNote(this.currentInstrument as InstrumentType, n, { volume: 0.5 });
+      this.safeTimeout(() => {
+        if (this.isActive) {
+          this.engine.playInstrumentNote(this.currentInstrument as InstrumentType, n, { volume: 0.5 });
+        }
       }, idx * 120);
     });
   }

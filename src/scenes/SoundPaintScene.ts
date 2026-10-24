@@ -48,6 +48,7 @@ export class SoundPaintScene implements StorybookScene {
   private engine: AudioEngine;
 
   public element!: HTMLElement;
+  private isActive: boolean = false;
 
   // Canvas
   private canvas!: HTMLCanvasElement;
@@ -300,6 +301,8 @@ export class SoundPaintScene implements StorybookScene {
    * - Top (Y < 0.35): Sparkling high C6 glockenspiel chimes.
    */
   private playMappedNote(x: number, y: number, velocity: number): void {
+    if (!this.isActive) return;
+
     const height = window.innerHeight || 844;
     const yPct = Math.max(0, Math.min(1, y / height));
     const vol = Math.min(1.0, 0.4 + (velocity / 1200) * 0.6);
@@ -336,6 +339,7 @@ export class SoundPaintScene implements StorybookScene {
    * Warm resonant cello drone chord sustained on lingering slow touch.
    */
   private playCelloDrone(y: number): void {
+    if (!this.isActive) return;
     const height = window.innerHeight || 844;
     const yPct = y / height;
     if (yPct > 0.6) {
@@ -467,11 +471,13 @@ export class SoundPaintScene implements StorybookScene {
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     this.startRenderLoop();
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
     cancelAnimationFrame(this.animFrameId);
     this.activePointers.clear();

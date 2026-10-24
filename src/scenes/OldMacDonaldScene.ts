@@ -44,6 +44,7 @@ export class OldMacDonaldScene implements StorybookScene {
   private tractorExhaustEl!: HTMLElement;
 
   // State
+  private isActive: boolean = false;
   private isBarnOpen: boolean = false;
   private currentBarnAnimalIndex: number = 0;
   private readonly barnAnimals: FarmAnimal[] = ['cow', 'sheep', 'pig', 'duck'];
@@ -51,6 +52,9 @@ export class OldMacDonaldScene implements StorybookScene {
   private tractorInterval: number | null = null;
   private banjoTimer: number | null = null;
   private isPlayingMusic: boolean = false;
+  private isVocalSongPlaying: boolean = false;
+  private vocalSongNode: AudioBufferSourceNode | null = null;
+  private activeTimeouts: Set<number> = new Set();
 
   constructor(container: HTMLElement, bursts: TouchBurstManager) {
     this.container = container;
@@ -59,6 +63,28 @@ export class OldMacDonaldScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    for (const id of this.activeTimeouts) {
+      clearTimeout(id);
+    }
+    this.activeTimeouts.clear();
+    if (this.banjoTimer !== null) {
+      clearTimeout(this.banjoTimer);
+      this.banjoTimer = null;
+    }
   }
 
   private render(): void {
@@ -258,6 +284,7 @@ export class OldMacDonaldScene implements StorybookScene {
         <button class="farm-quick-btn btn-pig" data-target="pig">🐷 OINK</button>
         <button class="farm-quick-btn btn-duck" data-target="duck">🦆 QUACK</button>
         <button class="farm-quick-btn btn-tractor" data-target="tractor">🚜 CHUG</button>
+        <button class="farm-quick-btn btn-sing" id="btn-farm-sing" data-target="sing" style="background: linear-gradient(135deg, #FF6B8B, #FF8E53); color: white; font-weight: 800;">🎶 SING!</button>
       </div>
     `;
 
@@ -318,7 +345,7 @@ export class OldMacDonaldScene implements StorybookScene {
       this.engine.playSound('chime.mp3', { volume: 0.8, pitch: 1.1 });
       this.bursts.spawnStarGlow(e.clientX, e.clientY, 14, '#FFD166');
       sunEl.classList.add('sun-bounce');
-      setTimeout(() => sunEl.classList.remove('sun-bounce'), 800);
+      this.safeTimeout(() => sunEl.classList.remove('sun-bounce'), 800);
     });
 
     // Quick toddler buttons
@@ -333,25 +360,68 @@ export class OldMacDonaldScene implements StorybookScene {
         else if (target === 'pig') this.triggerPig(pEvt.clientX, pEvt.clientY);
         else if (target === 'duck') this.triggerDuck(pEvt.clientX, pEvt.clientY);
         else if (target === 'tractor') this.triggerTractor(pEvt.clientX, pEvt.clientY);
+        else if (target === 'sing') this.toggleVocalSong();
       });
     });
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     this.startFarmBanjoGroove();
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
     this.stopFarmBanjoGroove();
     this.stopTractor();
+    this.stopVocalSong();
+    this.clearAllTimeouts();
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalSongPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  public startVocalSong(): void {
+    this.stopFarmBanjoGroove();
+    this.stopVocalSong();
+    this.isVocalSongPlaying = true;
+    const btn = this.element.querySelector('#btn-farm-sing') as HTMLElement;
+    if (btn) btn.innerText = '⏸ PAUSE';
+
+    this.vocalSongNode = this.engine.playSound('songs/old_macdonald.mp3', { volume: 0.95 });
+    if (this.vocalSongNode) {
+      this.vocalSongNode.onended = () => {
+        this.stopVocalSong();
+        if (this.isActive) this.startFarmBanjoGroove();
+      };
+    }
+  }
+
+  public stopVocalSong(): void {
+    this.isVocalSongPlaying = false;
+    const btn = this.element.querySelector('#btn-farm-sing') as HTMLElement;
+    if (btn) btn.innerText = '🎶 SING!';
+    if (this.vocalSongNode) {
+      try {
+        this.vocalSongNode.stop();
+        this.vocalSongNode.disconnect();
+      } catch {}
+      this.vocalSongNode = null;
+    }
   }
 
   /**
    * Toggles Barn doors open/close, revealing cycling farm animals with authentic sounds.
    */
   private toggleBarn(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.isBarnOpen = !this.isBarnOpen;
     const doorL = this.element.querySelector('#door-left') as HTMLElement;
     const doorR = this.element.querySelector('#door-right') as HTMLElement;
@@ -370,7 +440,7 @@ export class OldMacDonaldScene implements StorybookScene {
       this.bursts.spawnBurst(cx, cy, 12, '#FFD166');
 
       // Play corresponding animal sound
-      setTimeout(() => {
+      this.safeTimeout(() => {
         this.playAnimalSound(currentAnimal, cx, cy);
       }, 150);
     } else {
@@ -400,6 +470,7 @@ export class OldMacDonaldScene implements StorybookScene {
   }
 
   private playAnimalSound(animal: FarmAnimal, cx: number, cy: number): void {
+    if (!this.isActive) return;
     if (animal === 'cow') this.triggerCow(cx, cy);
     else if (animal === 'sheep') this.triggerSheep(cx, cy);
     else if (animal === 'pig') this.triggerPig(cx, cy);
@@ -410,6 +481,7 @@ export class OldMacDonaldScene implements StorybookScene {
    * Cow: Deep authentic "Moooo" (cow.ogg) + ear twitch & head chew.
    */
   public triggerCow(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.engine.playSound('cow.ogg', { volume: 0.9, pitch: 1.0 });
     this.engine.playInstrumentNote('banjo', 'C4', { volume: 0.6 });
     this.bursts.spawnBurst(cx || window.innerWidth * 0.3, cy || window.innerHeight * 0.6, 12, '#06D6A0');
@@ -417,13 +489,14 @@ export class OldMacDonaldScene implements StorybookScene {
     this.cowEl.classList.remove('cow-moo-anim');
     void this.cowEl.offsetWidth;
     this.cowEl.classList.add('cow-moo-anim');
-    setTimeout(() => this.cowEl.classList.remove('cow-moo-anim'), 1200);
+    this.safeTimeout(() => this.cowEl.classList.remove('cow-moo-anim'), 1200);
   }
 
   /**
    * Sheep: Gentle "Baaaa" (sheep.ogg) + wool puff bounce.
    */
   public triggerSheep(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.engine.playSound('sheep.ogg', { volume: 0.85, pitch: 1.05 });
     this.engine.playInstrumentNote('banjo', 'E4', { volume: 0.6 });
     this.bursts.spawnStarGlow(cx || window.innerWidth * 0.7, cy || window.innerHeight * 0.5, 14, '#FFF3B0');
@@ -431,14 +504,14 @@ export class OldMacDonaldScene implements StorybookScene {
     this.sheepEl.classList.remove('sheep-bounce-anim');
     void this.sheepEl.offsetWidth;
     this.sheepEl.classList.add('sheep-bounce-anim');
-    setTimeout(() => this.sheepEl.classList.remove('sheep-bounce-anim'), 1000);
+    this.safeTimeout(() => this.sheepEl.classList.remove('sheep-bounce-anim'), 1000);
   }
 
   /**
    * Pig: Authentic snort (animal_sprites.mp3 offset 65.28s) + mud splatter particles!
    */
   public triggerPig(cx: number, cy: number): void {
-    // Play pig snort from animal sprite
+    if (!this.isActive) return;
     this.engine.playSound('animal_sprites.mp3', {
       volume: 0.9,
       offset: 65.28,
@@ -450,13 +523,14 @@ export class OldMacDonaldScene implements StorybookScene {
     this.pigEl.classList.remove('pig-mud-roll');
     void this.pigEl.offsetWidth;
     this.pigEl.classList.add('pig-mud-roll');
-    setTimeout(() => this.pigEl.classList.remove('pig-mud-roll'), 1100);
+    this.safeTimeout(() => this.pigEl.classList.remove('pig-mud-roll'), 1100);
   }
 
   /**
    * Duck: Authentic quack (duck.mp3) + water splash particles.
    */
   public triggerDuck(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.engine.playSound('duck.mp3', { volume: 0.85 });
     this.engine.playSound('splash.mp3', { volume: 0.65, pitch: 1.3 });
     this.engine.playInstrumentNote('banjo', 'A4', { volume: 0.6 });
@@ -465,13 +539,14 @@ export class OldMacDonaldScene implements StorybookScene {
     this.duckEl.classList.remove('duck-paddle-anim');
     void this.duckEl.offsetWidth;
     this.duckEl.classList.add('duck-paddle-anim');
-    setTimeout(() => this.duckEl.classList.remove('duck-paddle-anim'), 1000);
+    this.safeTimeout(() => this.duckEl.classList.remove('duck-paddle-anim'), 1000);
   }
 
   /**
    * Tractor: Chug-chug-pop engine rhythm + smoke puffs.
    */
   public triggerTractor(cx: number, cy: number): void {
+    if (!this.isActive) return;
     if (this.isTractorChugging) {
       this.stopTractor();
       return;
@@ -485,6 +560,10 @@ export class OldMacDonaldScene implements StorybookScene {
     // Chug along locked to ~105 BPM
     let chugStep = 0;
     this.tractorInterval = window.setInterval(() => {
+      if (!this.isActive) {
+        this.stopTractor();
+        return;
+      }
       chugStep++;
       const pitch = chugStep % 2 === 0 ? 0.95 : 1.15;
       this.engine.playSound('woodblock.mp3', { volume: 0.65, pitch });
@@ -521,7 +600,7 @@ export class OldMacDonaldScene implements StorybookScene {
     let bassIdx = 0;
 
     const playStep = () => {
-      if (!this.isPlayingMusic) return;
+      if (!this.isPlayingMusic || !this.isActive) return;
 
       const n = notes[noteIdx % notes.length];
       this.engine.playInstrumentNote('banjo', n, { volume: 0.35 });
@@ -533,10 +612,10 @@ export class OldMacDonaldScene implements StorybookScene {
       }
 
       noteIdx++;
-      this.banjoTimer = window.setTimeout(playStep, 285); // ~105 BPM eighth notes
+      this.banjoTimer = this.safeTimeout(playStep, 285); // ~105 BPM eighth notes
     };
 
-    this.banjoTimer = window.setTimeout(playStep, 500);
+    this.banjoTimer = this.safeTimeout(playStep, 500);
   }
 
   private stopFarmBanjoGroove(): void {

@@ -45,6 +45,12 @@ export class RowYourBoatScene implements StorybookScene {
   private riverCtx!: CanvasRenderingContext2D;
   private fishEl!: HTMLElement;
 
+  // State
+  private isActive: boolean = false;
+  private activeTimeouts: Set<number> = new Set();
+  private vocalAudio: HTMLAudioElement | null = null;
+  private isVocalPlaying: boolean = false;
+
   // Water physics state
   private ripples: RipplePoint[] = [];
   private isWaterLoopRunning: boolean = false;
@@ -64,6 +70,22 @@ export class RowYourBoatScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts.clear();
   }
 
   private render(): void {
@@ -155,6 +177,7 @@ export class RowYourBoatScene implements StorybookScene {
 
       <!-- Toddler Bottom Quick Tappers -->
       <div class="river-toddler-bar">
+        <button class="river-quick-btn btn-sing-vocal" id="btn-river-sing" data-action="sing">🎶 SING</button>
         <button class="river-quick-btn btn-row" data-action="row">🛶 ROW BOAT</button>
         <button class="river-quick-btn btn-fish" data-action="fish">🐟 JUMPING FISH</button>
         <button class="river-quick-btn btn-splash" data-action="splash">💦 SPLASH</button>
@@ -223,7 +246,8 @@ export class RowYourBoatScene implements StorybookScene {
         e.stopPropagation();
         const pEvt = e as PointerEvent;
         const act = (btn as HTMLElement).getAttribute('data-action');
-        if (act === 'row') this.rowBoat(pEvt.clientX, pEvt.clientY);
+        if (act === 'sing') this.toggleVocalSong();
+        else if (act === 'row') this.rowBoat(pEvt.clientX, pEvt.clientY);
         else if (act === 'fish') this.triggerJumpingFish(pEvt.clientX, pEvt.clientY);
         else if (act === 'splash') this.triggerSplashZone(pEvt.clientX, pEvt.clientY);
         else if (act === 'harp') this.playHarpPhrase();
@@ -232,6 +256,7 @@ export class RowYourBoatScene implements StorybookScene {
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     // Gentle flowing river background sound
     this.engine.playAmbientSound('river.ogg', 0.4);
@@ -240,9 +265,51 @@ export class RowYourBoatScene implements StorybookScene {
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
+    this.clearAllTimeouts();
     this.engine.stopAmbientSound();
     this.stopWaterRippleLoop();
+    this.stopVocalSong();
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  private startVocalSong(): void {
+    this.stopVocalSong();
+    const btn = this.element.querySelector('#btn-river-sing') as HTMLElement;
+    if (btn) btn.classList.add('active');
+
+    try {
+      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/row_boat.mp3'));
+      this.vocalAudio.volume = 0.95;
+      this.isVocalPlaying = true;
+      this.vocalAudio.play().catch(e => console.warn('Row boat vocal song play warning:', e));
+      this.vocalAudio.onended = () => {
+        this.stopVocalSong();
+      };
+    } catch (e) {
+      console.warn('Could not start vocal song:', e);
+    }
+  }
+
+  private stopVocalSong(): void {
+    this.isVocalPlaying = false;
+    const btn = this.element.querySelector('#btn-river-sing') as HTMLElement;
+    if (btn) btn.classList.remove('active');
+    if (this.vocalAudio) {
+      this.vocalAudio.pause();
+      this.vocalAudio.currentTime = 0;
+      this.vocalAudio.removeAttribute('src');
+      this.vocalAudio.load();
+      this.vocalAudio = null;
+    }
   }
 
   /**
@@ -250,6 +317,8 @@ export class RowYourBoatScene implements StorybookScene {
    * plays acoustic splash sound & rhythmic harp note.
    */
   public rowBoat(_cx?: number, _cy?: number): void {
+    if (!this.isActive) return;
+
     this.boatRockAngle = this.rowStrokeIndex % 2 === 0 ? 6 : -6;
     this.boatWrapEl.style.transform = `rotate(${this.boatRockAngle}deg) translateY(-8px)`;
 
@@ -266,6 +335,10 @@ export class RowYourBoatScene implements StorybookScene {
     this.engine.playInstrumentNote('harp', note, { volume: 0.75 });
     this.rowStrokeIndex++;
 
+    if (this.rowStrokeIndex % 4 === 0) {
+      this.engine.playVoice('voice_row_boat.wav', 'Row row row your boat, merrily merrily merrily!', 0.85);
+    }
+
     // Water splash particles from oars
     const boatRect = this.boatWrapEl.getBoundingClientRect();
     this.bursts.spawnWaterSplash(boatRect.left + 20, boatRect.top + 35, 12);
@@ -274,7 +347,7 @@ export class RowYourBoatScene implements StorybookScene {
     this.addWaterRipple(boatRect.left + 30, boatRect.top + 40, 0.9);
     this.addWaterRipple(boatRect.right - 30, boatRect.top + 40, 0.9);
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.boatWrapEl.style.transform = `rotate(0deg) translateY(0px)`;
       this.oarLeftEl.classList.remove('oar-stroke');
       this.oarRightEl.classList.remove('oar-stroke');
@@ -285,6 +358,8 @@ export class RowYourBoatScene implements StorybookScene {
    * Water Lily: dips into water with a bobbing spring and plays bamboo woodblock clacks.
    */
   public triggerLily(lilyEl: HTMLElement, cx: number, cy: number): void {
+    if (!this.isActive) return;
+
     this.engine.playSound('woodblock.mp3', { volume: 0.8, pitch: 1.25 });
     this.engine.playSound('bubbles.ogg', { volume: 0.6 });
 
@@ -295,14 +370,14 @@ export class RowYourBoatScene implements StorybookScene {
     this.bursts.spawnWaterSplash(cx, cy, 10);
     this.addWaterRipple(cx, cy, 0.8);
 
-    setTimeout(() => lilyEl.classList.remove('lily-dip'), 600);
+    this.safeTimeout(() => lilyEl.classList.remove('lily-dip'), 600);
   }
 
   /**
    * Jumping Fish: leaps out of the river in an arc with a water splash upon re-entry!
    */
   public triggerJumpingFish(cx?: number, _cy?: number): void {
-    if (this.isFishJumping) return;
+    if (!this.isActive || this.isFishJumping) return;
     this.isFishJumping = true;
 
     const startX = cx ? Math.max(80, Math.min(window.innerWidth - 80, cx)) : window.innerWidth * 0.35;
@@ -314,7 +389,7 @@ export class RowYourBoatScene implements StorybookScene {
     this.engine.playInstrumentNote('harp', 'G4', { volume: 0.65 });
     this.bursts.spawnWaterSplash(startX, window.innerHeight * 0.65, 14);
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       // Re-entry splash
       this.engine.playSound('splash.mp3', { volume: 0.8, pitch: 1.1 });
       this.bursts.spawnWaterSplash(startX + 60, window.innerHeight * 0.65, 16);
@@ -325,6 +400,7 @@ export class RowYourBoatScene implements StorybookScene {
   }
 
   private triggerRiverTap(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.engine.playSound('bubbles.ogg', { volume: 0.55 });
     this.bursts.spawnWaterSplash(cx, cy, 8);
     if (Math.random() < 0.4) {
@@ -333,6 +409,7 @@ export class RowYourBoatScene implements StorybookScene {
   }
 
   private triggerSplashZone(cx: number, cy: number): void {
+    if (!this.isActive) return;
     this.engine.playSound('splash.mp3', { volume: 0.9, pitch: 1.0 });
     this.bursts.spawnWaterSplash(cx || window.innerWidth * 0.5, cy || window.innerHeight * 0.6, 20);
     this.addWaterRipple(cx || window.innerWidth * 0.5, cy || window.innerHeight * 0.6, 1.2);
@@ -359,7 +436,7 @@ export class RowYourBoatScene implements StorybookScene {
 
     const loop = () => {
       this.renderWaterRipples();
-      if (this.isWaterLoopRunning) {
+      if (this.isWaterLoopRunning && this.isActive) {
         this.waterAnimId = requestAnimationFrame(loop);
       }
     };
@@ -395,8 +472,10 @@ export class RowYourBoatScene implements StorybookScene {
   private playInitialHarpStrum(): void {
     const arpeggio = ['C4', 'E4', 'G4', 'C5'];
     arpeggio.forEach((n, idx) => {
-      setTimeout(() => {
-        this.engine.playInstrumentNote('harp', n, { volume: 0.5 });
+      this.safeTimeout(() => {
+        if (this.isActive) {
+          this.engine.playInstrumentNote('harp', n, { volume: 0.5 });
+        }
       }, idx * 100);
     });
   }
@@ -404,8 +483,10 @@ export class RowYourBoatScene implements StorybookScene {
   private playHarpPhrase(): void {
     const phrase = ['C4', 'D4', 'E4', 'G4', 'E4', 'C4'];
     phrase.forEach((n, idx) => {
-      setTimeout(() => {
-        this.engine.playInstrumentNote('harp', n, { volume: 0.65 });
+      this.safeTimeout(() => {
+        if (this.isActive) {
+          this.engine.playInstrumentNote('harp', n, { volume: 0.65 });
+        }
       }, idx * 180);
     });
   }

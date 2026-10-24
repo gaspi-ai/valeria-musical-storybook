@@ -64,6 +64,10 @@ export class BathTimeScene implements StorybookScene {
   private cleanCelebrationEl!: HTMLElement;
 
   // State
+  private isActive: boolean = false;
+  private activeTimeouts: Set<number> = new Set();
+  private vocalAudio: HTMLAudioElement | null = null;
+  private isVocalPlaying: boolean = false;
   private isWaterRunning: boolean = false;
   private isPuppyClean: boolean = false;
   private animFrameId: number = 0;
@@ -95,6 +99,22 @@ export class BathTimeScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts.clear();
   }
 
   private render(): void {
@@ -209,6 +229,10 @@ export class BathTimeScene implements StorybookScene {
 
       <!-- Toddler Bottom Quick Tappers (>= 56px Touch Targets, Safe-Area Padded) -->
       <div class="bathtime-toddler-bar">
+        <button class="bath-quick-btn btn-sing-vocal" id="btn-bath-sing">
+          <span class="btn-icon">🎶</span>
+          <span class="btn-text">SING</span>
+        </button>
         <button class="bath-quick-btn btn-sponge" id="btn-snap-sponge">
           <span class="btn-icon">🧽</span>
           <span class="btn-text">SPONGE</span>
@@ -285,13 +309,18 @@ export class BathTimeScene implements StorybookScene {
       this.engine.playSound('dog.mp3', { volume: 0.9, pitch: 1.1 });
       this.puppyTailEl.classList.add('wagging-fast');
       this.bursts.spawnBurst(e.clientX, e.clientY, 8, '#FFD166');
-      setTimeout(() => this.puppyTailEl.classList.remove('wagging-fast'), 800);
+      this.safeTimeout(() => this.puppyTailEl.classList.remove('wagging-fast'), 800);
     });
 
     // 4. Draggable Sponge Handling (zero-lag pointer events)
     this.setupDraggableSponge();
 
     // 5. Toddler Bottom Quick Action Buttons
+    this.element.querySelector('#btn-bath-sing')?.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      this.toggleVocalSong();
+    });
+
     this.element.querySelector('#btn-snap-sponge')?.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       this.snapSpongeToPuppy();
@@ -429,6 +458,7 @@ export class BathTimeScene implements StorybookScene {
       this.cleanCelebrationEl.classList.add('show');
       this.engine.playSound('dog.mp3', { volume: 1.0 });
       this.engine.playPeekabooFlourish();
+      this.engine.playVoice('voice_clean.wav', 'Squeaky clean! All fresh and sparkly!', 0.95);
 
       const rect = this.puppyEl.getBoundingClientRect();
       this.bursts.spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 20, '#FFD166');
@@ -465,14 +495,16 @@ export class BathTimeScene implements StorybookScene {
    * Buoyant Rubber Duck diving & rebounding.
    */
   private triggerDuckDive(x: number, y: number): void {
+    if (!this.isActive) return;
     this.duckEl.classList.add('diving');
     this.engine.playRubberDuck();
+    this.engine.playVoice('voice_splash.wav', 'Splish splash! Having fun in the bath!', 0.85);
     this.bursts.spawnWaterSplash(x, y, 14);
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.duckEl.classList.remove('diving');
       this.duckEl.classList.add('rebound');
-      setTimeout(() => this.duckEl.classList.remove('rebound'), 500);
+      this.safeTimeout(() => this.duckEl.classList.remove('rebound'), 500);
     }, 450);
   }
 
@@ -661,6 +693,7 @@ export class BathTimeScene implements StorybookScene {
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
 
     // Start 110 BPM acoustic ragtime ukulele swing groove
@@ -672,20 +705,66 @@ export class BathTimeScene implements StorybookScene {
     this.startWaterLoop();
 
     // Position sponge conveniently near puppy
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.snapSpongeToPuppy();
     }, 200);
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
+    this.clearAllTimeouts();
     this.engine.stopUkuleleSwingGroove();
     this.engine.stopFaucetRunningWater();
     this.isWaterRunning = false;
+    this.stopVocalSong();
     cancelAnimationFrame(this.animFrameId);
 
     // Clean up bubbles
     this.bubblesContainer.innerHTML = '';
     this.floatingBubbles = [];
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  private startVocalSong(): void {
+    this.stopVocalSong();
+    this.engine.stopUkuleleSwingGroove();
+    const btn = this.element.querySelector('#btn-bath-sing') as HTMLElement;
+    if (btn) btn.classList.add('active');
+
+    try {
+      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/mommy.mp3'));
+      this.vocalAudio.volume = 0.95;
+      this.isVocalPlaying = true;
+      this.vocalAudio.play().catch(e => console.warn('Bath vocal song play warning:', e));
+      this.vocalAudio.onended = () => {
+        this.stopVocalSong();
+      };
+    } catch (e) {
+      console.warn('Could not start vocal song:', e);
+    }
+  }
+
+  private stopVocalSong(): void {
+    this.isVocalPlaying = false;
+    const btn = this.element.querySelector('#btn-bath-sing') as HTMLElement;
+    if (btn) btn.classList.remove('active');
+    if (this.vocalAudio) {
+      this.vocalAudio.pause();
+      this.vocalAudio.currentTime = 0;
+      this.vocalAudio.removeAttribute('src');
+      this.vocalAudio.load();
+      this.vocalAudio = null;
+    }
+    if (this.isActive && this.isUkulelePlaying) {
+      this.engine.startUkuleleSwingGroove();
+    }
   }
 }

@@ -31,6 +31,12 @@ export class WheelsScene implements StorybookScene {
 
   public element!: HTMLElement;
 
+  // State
+  private isActive: boolean = false;
+  private activeTimeouts: Set<number> = new Set();
+  private vocalAudio: HTMLAudioElement | null = null;
+  private isVocalPlaying: boolean = false;
+
   // Wheel physics state
   private wheelAngle: number = 0;
   private wheelVelocity: number = 0;
@@ -68,10 +74,26 @@ export class WheelsScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
-    this.startWheelPhysics();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts.clear();
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     this.engine.startEngineRumble();
     if (!this.wheelAnimId) {
@@ -87,8 +109,11 @@ export class WheelsScene implements StorybookScene {
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
+    this.clearAllTimeouts();
     this.engine.stopEngineRumble();
+    this.stopVocalSong();
     if (this.wheelAnimId) {
       cancelAnimationFrame(this.wheelAnimId);
       this.wheelAnimId = 0;
@@ -96,6 +121,45 @@ export class WheelsScene implements StorybookScene {
     if (this.unsubscribeBeat) {
       this.unsubscribeBeat();
       this.unsubscribeBeat = null;
+    }
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  private startVocalSong(): void {
+    this.stopVocalSong();
+    const signText = this.element.querySelector('#bus-sign-text');
+    if (signText) signText.textContent = '🎶 SINGING... 🎵';
+
+    try {
+      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/monkeys.mp3'));
+      this.vocalAudio.volume = 0.95;
+      this.isVocalPlaying = true;
+      this.vocalAudio.play().catch(e => console.warn('Bus vocal song play warning:', e));
+      this.vocalAudio.onended = () => {
+        this.stopVocalSong();
+      };
+    } catch (e) {
+      console.warn('Could not start vocal song:', e);
+    }
+  }
+
+  private stopVocalSong(): void {
+    this.isVocalPlaying = false;
+    const signText = this.element.querySelector('#bus-sign-text');
+    if (signText) signText.textContent = '🎵 SING ALONG 🎶';
+    if (this.vocalAudio) {
+      this.vocalAudio.pause();
+      this.vocalAudio.currentTime = 0;
+      this.vocalAudio.removeAttribute('src');
+      this.vocalAudio.load();
+      this.vocalAudio = null;
     }
   }
 
@@ -221,9 +285,11 @@ export class WheelsScene implements StorybookScene {
             <path d="M 60 170 L 600 170" stroke="#264653" stroke-width="9" stroke-linecap="round" />
             <path d="M 60 195 L 600 195" stroke="#264653" stroke-width="5" stroke-linecap="round" />
 
-            <!-- "SCHOOL BUS" Whimsical Sign on Roof -->
-            <rect x="230" y="46" width="180" height="26" rx="6" fill="#FFBD00" stroke="#264653" stroke-width="3" />
-            <text x="320" y="65" font-family="'Outfit', 'Impact', sans-serif" font-weight="900" font-size="15" fill="#264653" text-anchor="middle" letter-spacing="3">SCHOOL BUS</text>
+            <!-- "SCHOOL BUS" Whimsical Sign on Roof / Interactive Sing-Along Button -->
+            <g id="bus-roof-sign" style="cursor: pointer;">
+              <rect x="220" y="44" width="200" height="28" rx="8" fill="#FFBD00" stroke="#264653" stroke-width="3" />
+              <text id="bus-sign-text" x="320" y="64" font-family="'Outfit', 'Impact', sans-serif" font-weight="900" font-size="14" fill="#264653" text-anchor="middle" letter-spacing="2">🎵 SING ALONG 🎶</text>
+            </g>
 
             <!-- Front Hood & Grille / Interactive Horn Button -->
             <g id="bus-grille-group" class="interactive-horn-target" style="cursor: pointer;">
@@ -485,6 +551,14 @@ export class WheelsScene implements StorybookScene {
       }
     });
 
+    // 5. Roof Sign Tap -> Sing along vocal song
+    const signEl = this.element.querySelector('#bus-roof-sign');
+    signEl?.addEventListener('pointerdown', (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleVocalSong();
+    });
+
     // 6. Passengers Tap Reactions
     this.passengerEls.forEach(p => {
       p.addEventListener('pointerdown', (e: PointerEvent) => {
@@ -502,7 +576,7 @@ export class WheelsScene implements StorybookScene {
         } else if (animal === 'monkey') {
           this.engine.playSound('monkey.mp3', { volume: 0.85 });
         }
-        setTimeout(() => {
+        this.safeTimeout(() => {
           this.engine.playSound('laugh.mp3', { volume: 0.45 });
         }, 300);
       });
@@ -515,7 +589,7 @@ export class WheelsScene implements StorybookScene {
       this.bursts.spawnBurst(e.clientX, e.clientY, 12, '#4ECDC4');
       this.bounceElement(this.driverEl);
       this.engine.playSound('cuckoo.mp3', { volume: 0.75 });
-      setTimeout(() => {
+      this.safeTimeout(() => {
         this.triggerHorn(e.clientX, e.clientY);
       }, 250);
     });
@@ -552,6 +626,8 @@ export class WheelsScene implements StorybookScene {
     let lastTime = performance.now();
 
     const loop = (time: number) => {
+      if (!this.isActive) return;
+
       const dt = Math.min(0.05, (time - lastTime) / 1000.0);
       lastTime = time;
 
@@ -608,7 +684,8 @@ export class WheelsScene implements StorybookScene {
       this.bursts.spawnBurst(touchX, touchY, 12, '#06D6A0');
       // Realistic door opening latch and creak
       this.engine.playSound('door_bell.mp3', { volume: 0.7, pitch: 1.2 });
-      setTimeout(() => {
+      this.engine.playVoice('voice_wheels_doors.wav', 'The doors on the bus go open and shut!', 0.9);
+      this.safeTimeout(() => {
         this.engine.playSound('laugh.mp3', { volume: 0.5 });
       }, 200);
     } else {
@@ -635,11 +712,11 @@ export class WheelsScene implements StorybookScene {
     void wiperAssembly.offsetWidth;
     wiperAssembly.classList.add('swish');
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.engine.playSound('wiper.mp3', { volume: 0.8, pitch: 1.25 });
     }, 380);
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.isWiperActive = false;
       wiperAssembly.classList.remove('swish');
     }, 800);
@@ -654,6 +731,9 @@ export class WheelsScene implements StorybookScene {
     // Alternate between classic car horn and vintage bulb horn
     const hornSound = Math.random() > 0.5 ? 'horn_car.mp3' : 'horn_bulb.mp3';
     this.engine.playSound(hornSound, { volume: 0.95 });
+
+    // Spoken horn voice
+    this.engine.playVoice('voice_wheels_horn.wav', 'Beep beep! The horn goes beep beep beep!', 0.9);
 
     // Elastic Squash & Stretch on entire bus body
     if (this.busBodyEl) {
@@ -694,7 +774,7 @@ export class WheelsScene implements StorybookScene {
       rainWrap.appendChild(drop);
     }
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       cloud.classList.remove('cloud-raining');
       rainWrap.innerHTML = '';
     }, 1800);

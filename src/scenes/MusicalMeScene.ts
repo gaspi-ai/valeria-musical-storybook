@@ -49,6 +49,10 @@ export class MusicalMeScene implements StorybookScene {
   ];
 
   // Call & response state
+  private isActive: boolean = false;
+  private activeTimeouts: Set<number> = new Set();
+  private vocalAudio: HTMLAudioElement | null = null;
+  private isVocalPlaying: boolean = false;
   private isCallResponseActive: boolean = false;
   private promptPadIndex: number = 0;
   private companionEl!: HTMLElement;
@@ -63,21 +67,83 @@ export class MusicalMeScene implements StorybookScene {
     this.bindEvents();
   }
 
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    this.activeTimeouts.forEach(id => clearTimeout(id));
+    this.activeTimeouts.clear();
+  }
+
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
     // Greet with gentle arpeggio
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.playGentleGlissando();
     }, 350);
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
+    this.clearAllTimeouts();
+    this.stopVocalSong();
+    this.isCallResponseActive = false;
+    if (this.companionEl) this.companionEl.classList.remove('bird-singing');
+    this.padElements.forEach(p => p.classList.remove('pad-golden-glow'));
+  }
+
+  public toggleVocalSong(): void {
+    if (this.isVocalPlaying) {
+      this.stopVocalSong();
+    } else {
+      this.startVocalSong();
+    }
+  }
+
+  private startVocalSong(): void {
+    this.stopVocalSong();
+    const btn = this.element.querySelector('#btn-musical-me-sing') as HTMLElement;
+    if (btn) btn.classList.add('active');
+
+    try {
+      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/sunshine.mp3'));
+      this.vocalAudio.volume = 0.95;
+      this.isVocalPlaying = true;
+      this.vocalAudio.play().catch(e => console.warn('Sunshine vocal song play warning:', e));
+      this.vocalAudio.onended = () => {
+        this.stopVocalSong();
+      };
+    } catch (e) {
+      console.warn('Could not start vocal song:', e);
+    }
+  }
+
+  private stopVocalSong(): void {
+    this.isVocalPlaying = false;
+    const btn = this.element.querySelector('#btn-musical-me-sing') as HTMLElement;
+    if (btn) btn.classList.remove('active');
+    if (this.vocalAudio) {
+      this.vocalAudio.pause();
+      this.vocalAudio.currentTime = 0;
+      this.vocalAudio.removeAttribute('src');
+      this.vocalAudio.load();
+      this.vocalAudio = null;
+    }
   }
 
   public setInstrument(inst: InstrumentType): void {
     this.currentInstrument = inst;
-    const instButtons = this.element.querySelectorAll('.inst-badge');
+    const instButtons = this.element.querySelectorAll('.inst-badge:not(.btn-sing-vocal)');
     instButtons.forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-inst') === inst);
     });
@@ -163,6 +229,10 @@ export class MusicalMeScene implements StorybookScene {
 
       <!-- Instrument Switcher Bar (Toddler Friendly Big Badges) -->
       <div class="instrument-selector-bar">
+        <button class="inst-badge btn-sing-vocal" id="btn-musical-me-sing" title="Sing Along to You Are My Sunshine">
+          <span class="inst-icon">☀️</span>
+          <span class="inst-name">Sing</span>
+        </button>
         <button class="inst-badge active" data-inst="marimba" title="Wooden Marimba">
           <span class="inst-icon">🪵</span>
           <span class="inst-name">Marimba</span>
@@ -204,7 +274,7 @@ export class MusicalMeScene implements StorybookScene {
     });
 
     // 2. Instrument Badge Selectors
-    const instBadges = this.element.querySelectorAll('.inst-badge');
+    const instBadges = this.element.querySelectorAll('.inst-badge[data-inst]');
     instBadges.forEach(btn => {
       btn.addEventListener('pointerdown', (e: Event) => {
         const pe = e as PointerEvent;
@@ -216,6 +286,14 @@ export class MusicalMeScene implements StorybookScene {
         this.bursts.spawnBurst(pe.clientX, pe.clientY, 10, '#FFD166');
         this.engine.playInstrumentNote(inst, 'C5', { volume: 0.8 });
       });
+    });
+
+    // Sing along button
+    const singBtn = this.element.querySelector('#btn-musical-me-sing') as HTMLElement;
+    singBtn?.addEventListener('pointerdown', (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleVocalSong();
     });
 
     // 3. Singing Companion Call & Response Trigger
@@ -231,6 +309,8 @@ export class MusicalMeScene implements StorybookScene {
    * Strikes a sound pad with organic resonance, particle bursts, and squash-stretch.
    */
   public strikePad(index: number, note: string, touchX: number, touchY: number): void {
+    if (!this.isActive) return;
+
     const padConfig = this.pads[index];
     const padEl = this.padElements[index];
 
@@ -259,6 +339,7 @@ export class MusicalMeScene implements StorybookScene {
    * Call & Response: The Bluebird sings a note motif and illuminates the flower pad.
    */
   private triggerCallAndResponse(): void {
+    if (!this.isActive) return;
     this.isCallResponseActive = true;
     const bubble = this.element.querySelector('#companion-bubble') as HTMLElement;
     bubble.innerHTML = `<span>Listen & Tap! 🎶</span>`;
@@ -270,16 +351,19 @@ export class MusicalMeScene implements StorybookScene {
     // Flutter bird
     this.companionEl.classList.add('bird-singing');
 
+    // Spoken companion cue
+    this.engine.playVoice('voice_sing_with_me.wav', 'Sing with me!', 0.9);
+
     // Bird plays the target note
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.engine.playInstrumentNote(this.currentInstrument, targetPad.note, { volume: 0.9 });
       this.highlightPad(this.promptPadIndex);
-    }, 400);
+    }, 450);
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
       this.companionEl.classList.remove('bird-singing');
       bubble.innerHTML = `<span>Your turn! 👆</span>`;
-    }, 1200);
+    }, 1300);
   }
 
   private highlightPad(index: number): void {
@@ -290,6 +374,7 @@ export class MusicalMeScene implements StorybookScene {
   }
 
   private celebrateCallResponseSuccess(touchX: number, touchY: number): void {
+    if (!this.isActive) return;
     this.isCallResponseActive = false;
     const bubble = this.element.querySelector('#companion-bubble') as HTMLElement;
     bubble.innerHTML = `<span>Yay! Wonderful! 🌟</span>`;
@@ -297,9 +382,9 @@ export class MusicalMeScene implements StorybookScene {
     // Clear glows
     this.padElements.forEach(p => p.classList.remove('pad-golden-glow'));
 
-    // Joyful acoustic applause & fanfare
+    // Joyful spoken compliment & fanfare
     this.engine.playSound('fanfare.mp3', { volume: 0.7 });
-    this.engine.playSound('laugh.mp3', { volume: 0.5 });
+    this.engine.playVoice('voice_great_job.wav', "Great job! You're a superstar!", 0.9);
 
     // Confetti burst
     confetti({
@@ -313,7 +398,7 @@ export class MusicalMeScene implements StorybookScene {
     });
 
     // Reset bubble after 2.5s
-    setTimeout(() => {
+    this.safeTimeout(() => {
       bubble.innerHTML = `<span>Tap me to play! 🎵</span>`;
     }, 2500);
   }
@@ -323,12 +408,13 @@ export class MusicalMeScene implements StorybookScene {
    */
   private playGentleGlissando(): void {
     this.pads.forEach((p, idx) => {
-      setTimeout(() => {
+      this.safeTimeout(() => {
+        if (!this.isActive) return;
         this.engine.playInstrumentNote(this.currentInstrument, p.note, { volume: 0.55 });
         const padEl = this.padElements[idx];
         if (padEl) {
           padEl.classList.add('pad-strike');
-          setTimeout(() => padEl.classList.remove('pad-strike'), 350);
+          this.safeTimeout(() => padEl.classList.remove('pad-strike'), 350);
         }
       }, idx * 110);
     });

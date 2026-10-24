@@ -72,13 +72,13 @@ export class SceneManager {
     this.isTransitioning = true;
     const prevScene = this.activeSceneId ? this.scenes.get(this.activeSceneId) : null;
 
-    // 1. Deactivate previous scene (stops animation loops & loops)
+    // 1. Deactivate previous scene (stops animation loops & scene timers)
     if (prevScene) {
       prevScene.deactivate();
     }
 
-    // 2. Stop audio loops & scheduler from old scene
-    this.engine.stopAllLoops();
+    // 2. Total audio isolation: stops all active voices, loops, ambient sounds, speech, and schedulers
+    this.engine.stopAllAudio();
 
     // 3. Preload assets for new scene in background
     this.engine.preloadScene(targetSceneId).catch(() => {});
@@ -94,6 +94,31 @@ export class SceneManager {
 
     this.isTransitioning = false;
     return true;
+  }
+
+  /**
+   * Cleanly deactivates the currently running scene when opening modal/jukebox overlays.
+   */
+  public deactivateActiveScene(): void {
+    if (this.activeSceneId) {
+      const active = this.scenes.get(this.activeSceneId);
+      if (active) {
+        active.deactivate();
+      }
+      this.engine.stopAllAudio();
+    }
+  }
+
+  /**
+   * Resumes the active scene when returning from modal/jukebox overlays.
+   */
+  public activateActiveScene(): void {
+    if (this.activeSceneId) {
+      const active = this.scenes.get(this.activeSceneId);
+      if (active) {
+        active.activate();
+      }
+    }
   }
 
   public onSceneChange(cb: (sceneId: string) => void): () => void {

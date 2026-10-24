@@ -266,13 +266,14 @@ export class AudioEngine {
     if (sceneId === 'wheels') {
       assets.push(
         'wheels_bus_track.mp3', 'horn_car.mp3', 'horn_bulb.mp3',
-        'door_bell.mp3', 'wiper.mp3', 'laugh.mp3', 'dog.mp3', 'meow.mp3', 'monkey.mp3'
+        'door_bell.mp3', 'wiper.mp3', 'laugh.mp3', 'dog.mp3', 'meow.mp3', 'monkey.mp3',
+        'voice_wheels_horn.wav', 'voice_wheels_doors.wav'
       );
     } else if (sceneId === 'musical_me') {
       for (const n of AudioEngine.PENTATONIC_SCALE) {
         assets.push(`marimba_${n}.mp3`, `glock_${n}.mp3`, `piano_${n}.mp3`, `musicbox_${n}.mp3`);
       }
-      assets.push('fanfare.mp3', 'cuckoo.mp3');
+      assets.push('fanfare.mp3', 'cuckoo.mp3', 'voice_sing_with_me.wav', 'voice_great_job.wav');
     } else if (sceneId === 'old_macdonald') {
       assets.push('cow.ogg', 'sheep.ogg', 'duck.mp3', 'animal_sprites.mp3', 'woodblock.mp3');
       for (const n of ['C4', 'D4', 'E4', 'G4', 'A4', 'C5']) {
@@ -282,23 +283,23 @@ export class AudioEngine {
         assets.push(`bass_${n}.mp3`);
       }
     } else if (sceneId === 'itsy_bitsy') {
-      assets.push('rain.ogg', 'slide_whistle.mp3', 'bubbles.ogg', 'woodblock.mp3');
+      assets.push('rain.ogg', 'slide_whistle.mp3', 'bubbles.ogg', 'woodblock.mp3', 'voice_spider_climb.wav', 'voice_spider_rain.wav', 'voice_spider_sun.wav');
       for (const n of AudioEngine.PENTATONIC_SCALE) {
         assets.push(`nylon_guitar_${n}.mp3`, `marimba_${n}.mp3`);
       }
     } else if (sceneId === 'twinkle_star') {
-      assets.push('snore.mp3', 'bubbles.ogg');
+      assets.push('snore.mp3', 'bubbles.ogg', 'voice_twinkle_wish.wav');
       for (const n of AudioEngine.BELL_SCALE) {
         assets.push(`glock_${n}.mp3`, `celesta_${n}.mp3`, `musicbox_${n}.mp3`);
       }
     } else if (sceneId === 'row_boat') {
-      assets.push('river.ogg', 'row_boat.ogg', 'splash.mp3', 'woodblock.mp3', 'bubbles.ogg');
+      assets.push('river.ogg', 'row_boat.ogg', 'splash.mp3', 'woodblock.mp3', 'bubbles.ogg', 'voice_row_boat.wav');
       for (const n of ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5']) {
         assets.push(`harp_${n}.mp3`, `nylon_guitar_${n}.mp3`);
       }
     } else if (sceneId === 'bath_time') {
       // Scene A: Bath Time Splash & Clean
-      assets.push('squeak.mp3', 'splash.mp3', 'duck.mp3', 'dog.mp3', 'bubbles.ogg', 'woodblock.mp3', 'acoustic_shaker.mp3', 'river.ogg');
+      assets.push('squeak.mp3', 'splash.mp3', 'duck.mp3', 'dog.mp3', 'bubbles.ogg', 'woodblock.mp3', 'acoustic_shaker.mp3', 'river.ogg', 'voice_splash.wav', 'voice_clean.wav');
       for (const n of ['C5', 'D5', 'E5', 'G5', 'A5']) {
         assets.push(`glock_${n}.mp3`, `celesta_${n}.mp3`);
       }
@@ -307,7 +308,10 @@ export class AudioEngine {
       }
     } else if (sceneId === 'peekaboo_meadow') {
       // Scene B: Peek-a-Boo Meadow
-      assets.push('laugh.mp3', 'chime.mp3', 'boing.mp3', 'acoustic_egg_shaker.mp3', 'meow.mp3');
+      assets.push(
+        'laugh.mp3', 'chime.mp3', 'boing.mp3', 'acoustic_egg_shaker.mp3', 'meow.mp3',
+        'voice_peekaboo.wav', 'voice_bunny.wav', 'voice_bear.wav', 'voice_kitten.wav'
+      );
       for (const n of ['C5', 'G5', 'C6', 'G6']) {
         assets.push(`xylo_${n}.mp3`);
       }
@@ -643,16 +647,47 @@ export class AudioEngine {
   }
 
   /**
+   * Plays a real recorded voice file (e.g. voice_peekaboo.wav) or speaks with Web Speech API fallback.
+   */
+  public playVoice(voiceFileName: string, fallbackText?: string, volume: number = 0.95): AudioBufferSourceNode | null {
+    // 1. Try to play pre-recorded clean WAV voice clip
+    const source = this.playSound(voiceFileName, { volume });
+    if (source) {
+      return source;
+    }
+
+    // 2. Fallback to Web Speech API if audio clip not yet loaded and fallback text provided
+    if (fallbackText && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel(); // Stop any previous speech so voices don't talk over each other
+        const utter = new SpeechSynthesisUtterance(fallbackText);
+        utter.rate = 0.92;
+        utter.pitch = 1.25; // Warm, friendly pitch for toddlers
+        utter.volume = volume;
+        const voices = window.speechSynthesis.getVoices();
+        const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Natural')));
+        if (preferred) utter.voice = preferred;
+        window.speechSynthesis.speak(utter);
+      } catch {}
+    }
+
+    return null;
+  }
+
+  /**
    * Peek-a-Boo: Joyful human vocal "Peek-a-Boo!" or giggle + xylophone flourish.
    */
   public playPeekabooFlourish(): void {
-    // 1. Joyful human giggle
-    this.playSound('laugh.mp3', { volume: 0.95 });
+    // 1. Real voice: "Peek-a-boo! I see you!"
+    this.playVoice('voice_peekaboo.wav', 'Peek-a-boo! I see you!', 1.0);
 
-    // 2. Sparkly springy flourish
-    this.playSound('boing.mp3', { volume: 0.65, pitch: 1.2 });
+    // 2. Joyful human giggle
+    this.playSound('laugh.mp3', { volume: 0.8 });
 
-    // 3. Bright Xylophone / chime flourish arpeggio (C5 -> E5 -> G5 -> C6)
+    // 3. Sparkly springy flourish
+    this.playSound('boing.mp3', { volume: 0.55, pitch: 1.2 });
+
+    // 4. Bright Xylophone / chime flourish arpeggio (C5 -> E5 -> G5 -> C6)
     if (this.ctx) {
       const now = this.ctx.currentTime;
       const notes = ['C5', 'E5', 'G5', 'C6'];
@@ -670,14 +705,15 @@ export class AudioEngine {
    */
   public playAnimalSound(type: 'bear' | 'bunny' | 'kitten' | 'dog' | 'cow' | 'sheep' | 'duck' | 'pig'): void {
     if (type === 'kitten') {
-      this.playSound('meow.mp3', { volume: 0.9, pitch: 1.15 });
+      this.playVoice('voice_kitten.wav', 'A sweet little kitty! Meow!', 0.9);
+      this.playSound('meow.mp3', { volume: 0.85, pitch: 1.15 });
     } else if (type === 'bear') {
-      // Warm playful baby bear grumble
-      this.playSound('laugh.mp3', { volume: 0.85, pitch: 0.75 });
+      this.playVoice('voice_bear.wav', 'A friendly teddy bear!', 0.9);
+      this.playSound('laugh.mp3', { volume: 0.8, pitch: 0.75 });
     } else if (type === 'bunny') {
-      // Gentle bunny squeak & thump
-      this.playSound('squeak.mp3', { volume: 0.9, pitch: 1.4 });
-      this.playSound('woodblock.mp3', { volume: 0.7, pitch: 1.2 });
+      this.playVoice('voice_bunny.wav', 'A cute little bunny!', 0.9);
+      this.playSound('squeak.mp3', { volume: 0.85, pitch: 1.4 });
+      this.playSound('woodblock.mp3', { volume: 0.65, pitch: 1.2 });
     } else if (type === 'dog') {
       this.playSound('dog.mp3', { volume: 0.9 });
     } else if (type === 'cow') {
@@ -1215,6 +1251,37 @@ export class AudioEngine {
     this.stopMeadowFolkGroove();
     this.pauseSongTrack();
     this.stopScheduler();
+  }
+
+  /**
+   * Total Audio Isolation: Stops ALL sounds, active voices, loops, ambient streams,
+   * schedulers, and active speech synthesis. Ensures zero sound overlap or noise between games.
+   */
+  public stopAllAudio(): void {
+    // 1. Stop all loops & schedulers
+    this.stopAllLoops();
+
+    // 2. Stop all active polyphonic voices immediately with quick micro-fade to prevent click/pop
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      for (const voice of this.activeVoices) {
+        try {
+          voice.gain.gain.cancelScheduledValues(now);
+          voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
+          voice.gain.gain.linearRampToValueAtTime(0.0001, now + 0.015);
+          voice.source.stop(now + 0.02);
+          voice.source.disconnect();
+        } catch {}
+      }
+    }
+    this.activeVoices = [];
+
+    // 3. Cancel any active Web Speech synthesis so voices don't leak into new game
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
   }
 
   /**

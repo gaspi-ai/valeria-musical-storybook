@@ -52,12 +52,14 @@ export class PeekabooMeadowScene implements StorybookScene {
   private butterfliesContainer!: HTMLElement;
 
   // State
+  private isActive: boolean = false;
   private currentHidingSpot: HidingSpotId = 'bush';
   private currentAnimal: AnimalType = 'bunny';
   private isAnimalRevealed: boolean = false;
   private autoDuckTimer: number | null = null;
   private animFrameId: number = 0;
   private isFolkMusicPlaying: boolean = true;
+  private activeTimeouts: Set<number> = new Set();
 
   // Butterflies
   private butterflies: Butterfly[] = [];
@@ -70,6 +72,28 @@ export class PeekabooMeadowScene implements StorybookScene {
 
     this.render();
     this.bindEvents();
+  }
+
+  private safeTimeout(fn: () => void, ms: number): number {
+    const id = window.setTimeout(() => {
+      this.activeTimeouts.delete(id);
+      if (this.isActive) {
+        fn();
+      }
+    }, ms);
+    this.activeTimeouts.add(id);
+    return id;
+  }
+
+  private clearAllTimeouts(): void {
+    for (const id of this.activeTimeouts) {
+      clearTimeout(id);
+    }
+    this.activeTimeouts.clear();
+    if (this.autoDuckTimer) {
+      clearTimeout(this.autoDuckTimer);
+      this.autoDuckTimer = null;
+    }
   }
 
   private render(): void {
@@ -218,7 +242,7 @@ export class PeekabooMeadowScene implements StorybookScene {
       this.sunEl.classList.add('sun-bounce');
       this.engine.playGlockNote('G5', { volume: 0.9 });
       this.bursts.spawnStarGlow(e.clientX, e.clientY, 10, '#FFD166');
-      setTimeout(() => this.sunEl.classList.remove('sun-bounce'), 800);
+      this.safeTimeout(() => this.sunEl.classList.remove('sun-bounce'), 800);
     });
 
     // 5. Toddler Bottom Quick Buttons
@@ -353,6 +377,7 @@ export class PeekabooMeadowScene implements StorybookScene {
    * Tap on one of the 3 hiding spots.
    */
   private handleSpotTap(spot: HidingSpotId, x: number, y: number): void {
+    if (!this.isActive) return;
     if (this.currentHidingSpot === spot) {
       // Tap on the hiding spot where the animal is -> REVEAL!
       this.revealAnimal(false, x, y);
@@ -362,13 +387,13 @@ export class PeekabooMeadowScene implements StorybookScene {
       spotEl.classList.add('rustle-empty');
       this.engine.playSound('boing.mp3', { volume: 0.7, pitch: 1.3 });
       this.bursts.spawnBurst(x, y, 6, '#52B788');
-      setTimeout(() => spotEl.classList.remove('rustle-empty'), 450);
+      this.safeTimeout(() => spotEl.classList.remove('rustle-empty'), 450);
 
       // Cue animal in its spot to wiggle ears to help the toddler
       const activeEl = this.element.querySelector('#active-animal') as HTMLElement;
       if (activeEl) {
         activeEl.classList.add('wiggle-ears');
-        setTimeout(() => activeEl.classList.remove('wiggle-ears'), 600);
+        this.safeTimeout(() => activeEl.classList.remove('wiggle-ears'), 600);
       }
     }
   }
@@ -377,6 +402,7 @@ export class PeekabooMeadowScene implements StorybookScene {
    * The Big Reveal: Animal parts cover, pops up, covers eyes, opens them with "PEEK-A-BOO!"
    */
   private revealAnimal(force: boolean = false, x?: number, y?: number): void {
+    if (!this.isActive) return;
     if (this.isAnimalRevealed && !force) return;
     this.isAnimalRevealed = true;
 
@@ -397,7 +423,7 @@ export class PeekabooMeadowScene implements StorybookScene {
     // Animal paws cover eyes for split second, then swing open
     if (pawsEl) {
       pawsEl.classList.add('covering-eyes');
-      setTimeout(() => {
+      this.safeTimeout(() => {
         pawsEl.classList.remove('covering-eyes');
         pawsEl.classList.add('open-wide');
       }, 350);
@@ -414,7 +440,7 @@ export class PeekabooMeadowScene implements StorybookScene {
     this.bursts.spawnPollenSparkles(burstX, burstY, 12);
 
     // AUTO-REPEATABILITY: After 3 seconds of inactivity, animal giggles and sneaks to a new spot
-    this.autoDuckTimer = window.setTimeout(() => {
+    this.autoDuckTimer = this.safeTimeout(() => {
       this.duckAndSwitchSpot();
     }, 3200);
   }
@@ -423,6 +449,7 @@ export class PeekabooMeadowScene implements StorybookScene {
    * Animal giggles, ducks down, and reappears in a new randomized spot.
    */
   private duckAndSwitchSpot(): void {
+    if (!this.isActive) return;
     const animalEl = this.element.querySelector('#active-animal') as HTMLElement;
     if (animalEl) {
       animalEl.classList.add('duck-down');
@@ -430,7 +457,8 @@ export class PeekabooMeadowScene implements StorybookScene {
 
     this.engine.playSound('laugh.mp3', { volume: 0.65, pitch: 1.2 });
 
-    setTimeout(() => {
+    this.safeTimeout(() => {
+      if (!this.isActive) return;
       // Pick different spot
       const allSpots: HidingSpotId[] = ['log', 'bush', 'fence'];
       const otherSpots = allSpots.filter(s => s !== this.currentHidingSpot);
@@ -480,7 +508,7 @@ export class PeekabooMeadowScene implements StorybookScene {
       this.bursts.spawnPollenSparkles(e.clientX, e.clientY, 16);
       this.engine.playGlockNote('E5', { volume: 0.8 });
       el.classList.add('flutter-fast');
-      setTimeout(() => el.classList.remove('flutter-fast'), 800);
+      this.safeTimeout(() => el.classList.remove('flutter-fast'), 800);
     });
 
     this.butterfliesContainer.appendChild(el);
@@ -505,6 +533,7 @@ export class PeekabooMeadowScene implements StorybookScene {
     let frame = 0;
 
     const loop = () => {
+      if (!this.isActive) return;
       frame++;
 
       // Update butterflies
@@ -529,6 +558,7 @@ export class PeekabooMeadowScene implements StorybookScene {
   }
 
   public activate(): void {
+    this.isActive = true;
     this.element.style.display = 'block';
 
     // Start gentle bouncy folk rhythm (95 BPM)
@@ -540,12 +570,13 @@ export class PeekabooMeadowScene implements StorybookScene {
   }
 
   public deactivate(): void {
+    this.isActive = false;
     this.element.style.display = 'none';
     this.engine.stopMeadowFolkGroove();
-    if (this.autoDuckTimer) {
-      clearTimeout(this.autoDuckTimer);
-      this.autoDuckTimer = null;
+    this.clearAllTimeouts();
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = 0;
     }
-    cancelAnimationFrame(this.animFrameId);
   }
 }

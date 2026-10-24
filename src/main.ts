@@ -118,12 +118,11 @@ class ToddlerStorybookApp {
   }
 
   /**
-   * Seamlessly switches between any of the 6 scenes.
+   * Seamlessly switches between any of the 9 scenes.
    */
   public async switchScene(sceneId: string): Promise<void> {
-    if (sceneId !== 'wheels') {
-      this.ensemble.stop();
-    }
+    this.ensemble.stop();
+    this.engine.stopAllAudio();
     await this.sceneManager.switchScene(sceneId);
     if (sceneId === 'wheels') {
       this.ensemble.start();
@@ -172,11 +171,12 @@ class ToddlerStorybookApp {
   }
 
   /**
-   * Opens the Songs Jukebox and stops storybook scene audio.
+   * Opens the Songs Jukebox and stops storybook scene audio and animations.
    */
   public openJukebox(): void {
     this.ensemble.stop();
-    this.engine.pauseSongTrack();
+    this.sceneManager.deactivateActiveScene();
+    this.engine.stopAllAudio();
     this.floatingJukeboxBtn.style.display = 'none';
     this.songsJukebox.openJukebox();
   }
@@ -186,6 +186,8 @@ class ToddlerStorybookApp {
    */
   private handleExitJukebox(): void {
     this.floatingJukeboxBtn.style.display = 'flex';
+    this.engine.stopAllAudio();
+    this.sceneManager.activateActiveScene();
     const activeId = this.sceneManager.getActiveSceneId();
     if (activeId === 'wheels') {
       this.ensemble.start();
