@@ -19,6 +19,7 @@ export interface ParentGateCallbacks {
   onLanguageChange?: (lang: AppLanguage) => void;
   onInfantLockChange?: (locked: boolean) => void;
   onOpenJukebox?: () => void;
+  onOpenLearning?: () => void;
 }
 
 export class ParentGate {
@@ -139,6 +140,20 @@ export class ParentGate {
               <span class="wake-lock-dot active"></span>
               <span class="wake-lock-label">Screen Keep-Awake: <strong>Active (Won't Sleep)</strong></span>
             </div>
+          </div>
+
+          <!-- Little Learner Studio Launch Card (1-Year-Old Bilingual Lessons) -->
+          <div class="parent-section learning-parent-launch-card" style="background: linear-gradient(135deg, #06D6A0 0%, #118AB2 100%); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; color: white; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 14px rgba(17, 138, 178, 0.35);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 2rem;">🎓</span>
+              <div>
+                <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: #FFFFFF;">Little Learner Studio (EN / FR)</h3>
+                <p style="font-size: 0.8rem; margin: 2px 0 0 0; color: #E0FBFC;">6 Gentle Lessons for 1-Year-Olds: Words, Animals, Shapes, Body, 1–5</p>
+              </div>
+            </div>
+            <button id="btn-open-learning" style="background: #FFFFFF; color: #0F766E; border: none; font-weight: 800; font-size: 0.85rem; padding: 10px 16px; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
+              LEARN ➔
+            </button>
           </div>
 
           <!-- Toddler Jukebox Launch Card -->
@@ -442,6 +457,17 @@ export class ParentGate {
     openGuideBtn.addEventListener('click', () => {
       this.openGuideModal();
     });
+
+    // Launch Little Learner Studio
+    const openLearningBtn = this.modalOverlay.querySelector('#btn-open-learning') as HTMLElement;
+    if (openLearningBtn) {
+      openLearningBtn.addEventListener('click', () => {
+        this.closeModal();
+        if (this.callbacks.onOpenLearning) {
+          this.callbacks.onOpenLearning();
+        }
+      });
+    }
 
     // Launch Toddler Songs Jukebox
     const openJukeboxBtn = this.modalOverlay.querySelector('#btn-open-jukebox') as HTMLElement;

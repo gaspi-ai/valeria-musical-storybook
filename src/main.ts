@@ -23,6 +23,7 @@ import { BathTimeScene } from './scenes/BathTimeScene';
 import { PeekabooMeadowScene } from './scenes/PeekabooMeadowScene';
 import { SoundPaintScene } from './scenes/SoundPaintScene';
 import { SongsJukebox } from './components/SongsJukebox';
+import { LearningStudio } from './components/LearningStudio';
 import { appPrefs } from './state/AppPreferences';
 
 class ToddlerStorybookApp {
@@ -43,7 +44,9 @@ class ToddlerStorybookApp {
   private soundPaintScene: SoundPaintScene;
 
   private songsJukebox: SongsJukebox;
+  private learningStudio: LearningStudio;
   private floatingJukeboxBtn!: HTMLElement;
+  private floatingLearnBtn!: HTMLElement;
   private parentGate: ParentGate;
 
   constructor() {
@@ -80,11 +83,15 @@ class ToddlerStorybookApp {
     this.sceneManager.registerScene(this.peekabooMeadowScene);
     this.sceneManager.registerScene(this.soundPaintScene);
 
-    // 4. Dedicated Songs Jukebox (Toddler Jukebox & Fullscreen Animated Theater)
+    // 4. Dedicated Songs Jukebox & Little Learner Studio (EN / FR)
     this.songsJukebox = new SongsJukebox(this.appRoot, () => {
       this.handleExitJukebox();
     });
+    this.learningStudio = new LearningStudio(this.appRoot, this.bursts, () => {
+      this.handleExitLearningStudio();
+    });
     this.createFloatingJukeboxButton();
+    this.createFloatingLearnButton();
 
     // 5. Subtle 3-Second Hold / 2-Finger Parent Gate & Settings Modal
     this.parentGate = new ParentGate(this.appRoot, {
@@ -94,7 +101,8 @@ class ToddlerStorybookApp {
       onAudioModeChange: (mode) => this.setAudioMode(mode),
       onInstrumentChange: (inst) => this.setInstrument(inst),
       onInfantLockChange: (locked) => this.handleInfantLockChange(locked),
-      onOpenJukebox: () => this.openJukebox()
+      onOpenJukebox: () => this.openJukebox(),
+      onOpenLearning: () => this.openLearningStudio()
     });
 
     // Apply persisted instrument preference
@@ -132,9 +140,13 @@ class ToddlerStorybookApp {
   }
 
   private handleInfantLockChange(locked: boolean): void {
-    // Hide the exposed floating SONGS button while Infant Lock is active so a 1-year-old cannot accidentally exit
+    // Hide the exposed floating SONGS & LEARN buttons while Infant Lock is active
+    const displayVal = locked ? 'none' : 'flex';
     if (this.floatingJukeboxBtn) {
-      this.floatingJukeboxBtn.style.display = locked ? 'none' : 'flex';
+      this.floatingJukeboxBtn.style.display = displayVal;
+    }
+    if (this.floatingLearnBtn) {
+      this.floatingLearnBtn.style.display = displayVal;
     }
   }
 
@@ -192,13 +204,34 @@ class ToddlerStorybookApp {
   }
 
   /**
+   * Floating "🎓 LEARN" button on main screen to open the 1-Year-Old Bilingual Learning Studio.
+   */
+  private createFloatingLearnButton(): void {
+    this.floatingLearnBtn = document.createElement('button');
+    this.floatingLearnBtn.className = 'floating-learn-btn';
+    this.floatingLearnBtn.setAttribute('aria-label', 'Open Little Learner Studio');
+    this.floatingLearnBtn.innerHTML = `
+      <span class="btn-note-icon">🎓</span>
+      <span class="btn-text">LEARN</span>
+    `;
+    this.floatingLearnBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openLearningStudio();
+    });
+    this.appRoot.appendChild(this.floatingLearnBtn);
+  }
+
+  /**
    * Opens the Songs Jukebox and stops storybook scene audio and animations.
    */
   public openJukebox(): void {
+    this.learningStudio.closeStudio();
     this.ensemble.stop();
     this.sceneManager.deactivateActiveScene();
     this.engine.stopAllAudio();
     this.floatingJukeboxBtn.style.display = 'none';
+    this.floatingLearnBtn.style.display = 'none';
     this.songsJukebox.openJukebox();
   }
 
@@ -206,7 +239,37 @@ class ToddlerStorybookApp {
    * Called when returning from Jukebox to Storybook.
    */
   private handleExitJukebox(): void {
-    this.floatingJukeboxBtn.style.display = appPrefs.get().infantLock ? 'none' : 'flex';
+    const showFloating = appPrefs.get().infantLock ? 'none' : 'flex';
+    this.floatingJukeboxBtn.style.display = showFloating;
+    this.floatingLearnBtn.style.display = showFloating;
+    this.engine.stopAllAudio();
+    this.sceneManager.activateActiveScene();
+    const activeId = this.sceneManager.getActiveSceneId();
+    if (activeId === 'wheels') {
+      this.setAudioMode(appPrefs.get().audioMode);
+    }
+  }
+
+  /**
+   * Opens the 1-Year-Old Bilingual Learning Studio.
+   */
+  public openLearningStudio(): void {
+    this.songsJukebox.closeJukebox();
+    this.ensemble.stop();
+    this.sceneManager.deactivateActiveScene();
+    this.engine.stopAllAudio();
+    this.floatingJukeboxBtn.style.display = 'none';
+    this.floatingLearnBtn.style.display = 'none';
+    this.learningStudio.openStudio();
+  }
+
+  /**
+   * Called when returning from Learning Studio to Storybook.
+   */
+  private handleExitLearningStudio(): void {
+    const showFloating = appPrefs.get().infantLock ? 'none' : 'flex';
+    this.floatingJukeboxBtn.style.display = showFloating;
+    this.floatingLearnBtn.style.display = showFloating;
     this.engine.stopAllAudio();
     this.sceneManager.activateActiveScene();
     const activeId = this.sceneManager.getActiveSceneId();
@@ -223,18 +286,19 @@ class ToddlerStorybookApp {
     // Prevent right-click context menu
     window.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
-    // Helper to check if any settings, guide modal, or Jukebox is open
+    // Helper to check if any settings, guide modal, Jukebox, or Learning Studio is open
     const isInteractiveOverlayOpen = (): boolean => {
       const activeModal = document.querySelector('.parent-modal-overlay:not([style*="display: none"])');
       const activeJukebox = document.querySelector('.toddler-jukebox-container:not([style*="display: none"])');
-      return !!activeModal || !!activeJukebox;
+      const activeLearning = document.querySelector('.learning-studio-container:not([style*="display: none"])');
+      return !!activeModal || !!activeJukebox || !!activeLearning;
     };
 
-    // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal & jukebox
+    // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal & overlays
     window.addEventListener('touchstart', (e) => {
       const target = e.target as HTMLElement | null;
-      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .floating-jukebox-btn, .toddler-jukebox-container'))) {
-        return; // Allow touch in modal / jukebox
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .toddler-jukebox-container, .learning-studio-container'))) {
+        return; // Allow touch in modal / jukebox / learning studio
       }
       if (e.touches.length > 1) {
         // Allow toddler multi-touch in app, but prevent browser zoom
@@ -243,9 +307,9 @@ class ToddlerStorybookApp {
     }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
-      // Allow native finger scrolling inside the parent modal or jukebox grid
+      // Allow native finger scrolling inside the parent modal, jukebox grid, or learning hub
       const target = e.target as HTMLElement | null;
-      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .toddler-jukebox-container, .jukebox-grid-view'))) {
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .toddler-jukebox-container, .jukebox-grid-view, .learning-studio-container, .learning-hub-view'))) {
         return; // Allow native finger scrolling
       }
       // Prevent pull-to-refresh and window bouncing on toddler storybook screen
@@ -255,7 +319,7 @@ class ToddlerStorybookApp {
     // Global multi-touch burst reaction: Any tap or slap anywhere spawns sparkles!
     window.addEventListener('pointerdown', (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .floating-jukebox-btn, .toddler-jukebox-container')) {
+      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .toddler-jukebox-container, .learning-studio-container')) {
         return;
       }
       // Sparkle if tapping empty scene background
