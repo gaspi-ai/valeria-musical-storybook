@@ -119,6 +119,7 @@ body {
   justify-content: center;
   z-index: 1000;
   cursor: pointer;
+  touch-action: manipulation;
   transition: opacity 0.5s ease-out, transform 0.5s ease-out;
   padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left));
 }
@@ -223,6 +224,7 @@ body {
   border: 5px solid #FFBD00;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 0 6px rgba(255, 255, 255, 0.4);
   cursor: pointer;
+  touch-action: manipulation;
   animation: tapPulse 1.6s ease-in-out infinite;
   transform-origin: center;
 }

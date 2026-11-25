@@ -81,43 +81,49 @@ export class IntroScreen {
 
     this.container.appendChild(this.element);
 
-    // Any touch or click unlocks audio immediately (guarded against rapid multi-tap)
-    const handleUnlock = async (e: MouseEvent | TouchEvent | PointerEvent) => {
-      e.preventDefault();
+    // Any touch or click anywhere on the intro screen unlocks audio immediately.
+    // Uses click + touchend (blessed iOS Safari user gestures for Web Audio) and never blocks UI on audio resume.
+    const handleUnlock = (e: MouseEvent | TouchEvent) => {
       if (this.hasUnlocked) return;
       this.hasUnlocked = true;
-      const clientX = 'clientX' in e ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth / 2);
-      const clientY = 'clientY' in e ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : window.innerHeight / 2);
+
+      let clientX = window.innerWidth / 2;
+      let clientY = window.innerHeight / 2;
+      if ('changedTouches' in e && e.changedTouches && e.changedTouches[0]) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      } else if ('clientX' in e) {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
 
       const engine = AudioEngine.getInstance();
-      await engine.unlock();
 
-      // Spawn joyful burst
+      // Immediately show visual feedback and transition so UI can never hang on mobile
       this.bursts.spawnBurst(clientX, clientY, 20, '#FFD166');
-
-      // Play welcome glockenspiel arpeggio
-      engine.playInstrumentNote('glock', 'C4', { volume: 0.8 });
-      setTimeout(() => engine.playInstrumentNote('glock', 'E4', { volume: 0.8 }), 100);
-      setTimeout(() => engine.playInstrumentNote('glock', 'G4', { volume: 0.85 }), 200);
-      setTimeout(() => engine.playInstrumentNote('glock', 'C5', { volume: 0.9 }), 300);
-      setTimeout(() => engine.playSound('fanfare.mp3', { volume: 0.5 }), 400);
-
-      // Smooth fade out
       this.element.classList.add('fade-out');
+
+      // Unlock Web Audio inside the gesture, then play welcome chime once running
+      engine.unlock().then(() => {
+        engine.playInstrumentNote('glock', 'C4', { volume: 0.8 });
+        setTimeout(() => engine.playInstrumentNote('glock', 'E4', { volume: 0.8 }), 100);
+        setTimeout(() => engine.playInstrumentNote('glock', 'G4', { volume: 0.85 }), 200);
+        setTimeout(() => engine.playInstrumentNote('glock', 'C5', { volume: 0.9 }), 300);
+        setTimeout(() => engine.playSound('fanfare.mp3', { volume: 0.5 }), 400);
+      }).catch(() => {});
+
       setTimeout(() => {
         if (this.element.parentNode) {
           this.element.parentNode.removeChild(this.element);
         }
         this.onStart();
-      }, 550);
+      }, 450);
     };
 
     const tapBtn = this.element.querySelector('#intro-start-button') as HTMLElement;
-    tapBtn.addEventListener('pointerdown', handleUnlock);
-    this.element.addEventListener('pointerdown', (e) => {
-      if (e.target === this.element || (e.target as HTMLElement).classList.contains('intro-sun-wrap')) {
-        handleUnlock(e);
-      }
-    });
+    tapBtn.addEventListener('click', handleUnlock);
+    tapBtn.addEventListener('touchend', handleUnlock, { passive: true });
+    this.element.addEventListener('click', handleUnlock);
+    this.element.addEventListener('touchend', handleUnlock, { passive: true });
   }
 }

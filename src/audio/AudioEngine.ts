@@ -154,7 +154,36 @@ export class AudioEngine {
       }
 
       if (this.ctx.state === 'suspended') {
-        await this.ctx.resume();
+        // iOS Safari fix: ctx.resume() can hang indefinitely if called outside a blessed gesture.
+        // Race resume() with a 300ms timeout so app startup can NEVER freeze.
+        await Promise.race([
+          this.ctx.resume().catch(() => {}),
+          new Promise<void>((resolve) => setTimeout(resolve, 300))
+        ]);
+      }
+
+      // Classic iOS WebKit silent 1-sample buffer poke to force audio hardware awake
+      try {
+        const silentBuf = this.ctx.createBuffer(1, 1, 22050);
+        const silentSrc = this.ctx.createBufferSource();
+        silentSrc.buffer = silentBuf;
+        silentSrc.connect(this.ctx.destination);
+        silentSrc.start(0);
+      } catch {}
+
+      // If still suspended on iOS, attach a one-time touchend/click safety net to resume on next tap
+      if (this.ctx.state === 'suspended' && typeof window !== 'undefined') {
+        const retryResume = () => {
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+          if (this.ctx && this.ctx.state === 'running') {
+            window.removeEventListener('touchend', retryResume);
+            window.removeEventListener('click', retryResume);
+          }
+        };
+        window.addEventListener('touchend', retryResume, { passive: true });
+        window.addEventListener('click', retryResume, { passive: true });
       }
 
       return this.ctx.state === 'running';
