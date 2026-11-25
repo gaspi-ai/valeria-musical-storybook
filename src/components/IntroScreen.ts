@@ -14,6 +14,7 @@ export class IntroScreen {
   private onStart: () => void;
   private element!: HTMLElement;
   private bursts: TouchBurstManager;
+  private hasUnlocked: boolean = false;
 
   constructor(container: HTMLElement, bursts: TouchBurstManager, onStart: () => void) {
     this.container = container;
@@ -80,9 +81,11 @@ export class IntroScreen {
 
     this.container.appendChild(this.element);
 
-    // Any touch or click unlocks audio immediately
+    // Any touch or click unlocks audio immediately (guarded against rapid multi-tap)
     const handleUnlock = async (e: MouseEvent | TouchEvent | PointerEvent) => {
       e.preventDefault();
+      if (this.hasUnlocked) return;
+      this.hasUnlocked = true;
       const clientX = 'clientX' in e ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : window.innerWidth / 2);
       const clientY = 'clientY' in e ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : window.innerHeight / 2);
 

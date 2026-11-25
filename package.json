@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "verify:assets": "node scripts/verify_assets.cjs",
+    "build": "npm run verify:assets && tsc && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {

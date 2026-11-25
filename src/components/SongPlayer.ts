@@ -50,6 +50,13 @@ export class SongPlayer {
   private lastDispatchedBeat: number = -1;
   private loopSong: boolean = true;
 
+  private resolveLottiePath(lottiePath: string): string {
+    const rawBase = import.meta.env.BASE_URL || './';
+    const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+    const clean = lottiePath.replace(/^\/+/, '');
+    return `${base}${clean}`;
+  }
+
   public static readonly SONGS: SongMetadata[] = [
     {
       id: 'mommy',
@@ -60,7 +67,7 @@ export class SongPlayer {
       accentColor: '#FFD1DC',
       bpm: 108,
       meter: '4/4',
-      lottieFile: '/animations/mommy_lottie.json',
+      lottieFile: 'animations/mommy_lottie.json',
       audioFile: 'songs/mommy.mp3',
       durationSec: 25.0
     },
@@ -73,7 +80,7 @@ export class SongPlayer {
       accentColor: '#FFF3B0',
       bpm: 114,
       meter: '4/4',
-      lottieFile: '/animations/sunshine_lottie.json',
+      lottieFile: 'animations/sunshine_lottie.json',
       audioFile: 'songs/sunshine.mp3',
       durationSec: 45.0
     },
@@ -86,7 +93,7 @@ export class SongPlayer {
       accentColor: '#C084FC',
       bpm: 88,
       meter: '4/4',
-      lottieFile: '/animations/twinkle_lottie.json',
+      lottieFile: 'animations/twinkle_lottie.json',
       audioFile: 'songs/twinkle.mp3',
       durationSec: 42.0
     },
@@ -99,7 +106,7 @@ export class SongPlayer {
       accentColor: '#A7F3D0',
       bpm: 126,
       meter: '4/4',
-      lottieFile: '/animations/monkeys_lottie.json',
+      lottieFile: 'animations/monkeys_lottie.json',
       audioFile: 'songs/monkeys.mp3',
       durationSec: 35.0
     },
@@ -112,7 +119,7 @@ export class SongPlayer {
       accentColor: '#FDE68A',
       bpm: 112,
       meter: '4/4',
-      lottieFile: '/animations/farm_lottie.json',
+      lottieFile: 'animations/farm_lottie.json',
       audioFile: 'songs/old_macdonald.mp3',
       durationSec: 38.0
     },
@@ -125,7 +132,7 @@ export class SongPlayer {
       accentColor: '#E0E7FF',
       bpm: 76,
       meter: '6/8',
-      lottieFile: '/animations/lullaby_lottie.json',
+      lottieFile: 'animations/lullaby_lottie.json',
       audioFile: 'songs/rock_a_bye.mp3',
       durationSec: 40.0
     }
@@ -154,6 +161,8 @@ export class SongPlayer {
     });
 
     this.audioEl.addEventListener('error', (e) => {
+      // Ignore synthetic error fired when stop() clears src
+      if (!this.currentSong || !this.isPlaying) return;
       console.warn('HTML5 Audio error, using Web Audio failover:', e);
       this.playSyntheticFailover();
     });
@@ -166,14 +175,19 @@ export class SongPlayer {
     try {
       this.mediaSourceNode = ctx.createMediaElementSource(this.audioEl);
       this.gainNode = ctx.createGain();
-      this.gainNode.gain.setValueAtTime(0.9, ctx.currentTime);
+      this.gainNode.gain.setValueAtTime(0.95, ctx.currentTime);
 
-      // Route through master compressor to eliminate clipping on mobile speakers
+      // Route through AudioEngine musicBus -> DynamicsCompressor -> MasterGain
+      const destinationBus = this.engine.getMusicBus() || ctx.destination;
       this.mediaSourceNode.connect(this.gainNode);
-      this.gainNode.connect(ctx.destination);
+      this.gainNode.connect(destinationBus);
     } catch {
       // Audio already connected or CORS fallback
     }
+  }
+
+  public getLottieUrl(song: SongMetadata): string {
+    return this.resolveLottiePath(song.lottieFile);
   }
 
   /**

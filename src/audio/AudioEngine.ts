@@ -11,6 +11,8 @@
  * - Lookahead beat scheduler (110 BPM Ukulele Ragtime Swing & 95 BPM Bouncy Folk Acoustic).
  */
 
+import { appPrefs } from '../state/AppPreferences';
+
 export type InstrumentType = 
   | 'marimba' 
   | 'glock' 
@@ -54,9 +56,17 @@ export class AudioEngine {
   private activeVoices: ActiveVoice[] = [];
   private readonly MAX_POLYPHONY = 8;
 
-  // AudioBuffer cache memory pool
+  // AudioBuffer cache memory pool (LRU capped for mobile Safari RAM safety)
   private bufferCache: Map<string, AudioBuffer> = new Map();
   private loadingPromises: Map<string, Promise<AudioBuffer | null>> = new Map();
+  private readonly MAX_CACHED_BUFFERS = 48;
+
+  // Shared streaming vocal song player routed through Master Compressor & Volume
+  private vocalAudioEl: HTMLAudioElement | null = null;
+  private vocalMediaSource: MediaElementAudioSourceNode | null = null;
+  private vocalGainNode: GainNode | null = null;
+  private vocalEndedCallback: (() => void) | null = null;
+  private isVocalTrackPlaying: boolean = false;
 
   // Engine rumble node for bus
   private engineSource: AudioBufferSourceNode | null = null;
@@ -126,9 +136,9 @@ export class AudioEngine {
         this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
         this.compressor.release.setValueAtTime(0.18, this.ctx.currentTime);
 
-        // Master Gain
+        // Master Gain (initialized from persisted preferences)
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+        this.masterGain.gain.setValueAtTime(appPrefs.get().masterVolume, this.ctx.currentTime);
 
         // Separate buses for SFX and Music
         this.sfxGain = this.ctx.createGain();
@@ -158,6 +168,10 @@ export class AudioEngine {
     return this.ctx;
   }
 
+  public getMusicBus(): GainNode | null {
+    return this.musicGain;
+  }
+
   public get isUnlocked(): boolean {
     return !!this.ctx && this.ctx.state === 'running';
   }
@@ -176,13 +190,34 @@ export class AudioEngine {
     return `${base}${withAudio}`;
   }
 
+  private cacheBuffer(url: string, buffer: AudioBuffer): void {
+    if (this.bufferCache.has(url)) {
+      this.bufferCache.delete(url);
+    }
+    this.bufferCache.set(url, buffer);
+    // Evict oldest buffers when exceeding mobile-safe RAM cap
+    while (this.bufferCache.size > this.MAX_CACHED_BUFFERS) {
+      const oldestKey = this.bufferCache.keys().next().value;
+      if (oldestKey) {
+        this.bufferCache.delete(oldestKey);
+      } else {
+        break;
+      }
+    }
+  }
+
   /**
-   * Preloads an audio buffer from local path or GitHub CDN with memory pooling.
+   * Preloads an audio buffer from local path or GitHub CDN with LRU memory pooling.
    */
   public async loadBuffer(urlOrPath: string): Promise<AudioBuffer | null> {
+    if (!this.ctx) return null; // Wait for user gesture to unlock AudioContext
     const url = this.resolveAudioPath(urlOrPath);
     if (this.bufferCache.has(url)) {
-      return this.bufferCache.get(url)!;
+      const existing = this.bufferCache.get(url)!;
+      // Touch for LRU recency
+      this.bufferCache.delete(url);
+      this.bufferCache.set(url, existing);
+      return existing;
     }
     if (this.loadingPromises.has(url)) {
       return this.loadingPromises.get(url)!;
@@ -191,7 +226,6 @@ export class AudioEngine {
     const promise = (async () => {
       try {
         let res = await fetch(url);
-        // If local request failed and it's a known instrument, fallback to open-source GitHub CDN
         if (!res.ok) {
           const cdnFallback = this.getGitHubCDNFallback(urlOrPath);
           if (cdnFallback) {
@@ -200,14 +234,12 @@ export class AudioEngine {
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const arrayBuffer = await res.arrayBuffer();
-        if (!this.ctx) await this.unlock();
         if (!this.ctx) return null;
 
         const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-        this.bufferCache.set(url, audioBuffer);
+        this.cacheBuffer(url, audioBuffer);
         return audioBuffer;
-      } catch (err) {
-        // Soft fallback: try CDN if not tried already
+      } catch {
         const cdnUrl = this.getGitHubCDNFallback(urlOrPath);
         if (cdnUrl && cdnUrl !== url) {
           try {
@@ -216,7 +248,7 @@ export class AudioEngine {
               const arrayBuffer2 = await res2.arrayBuffer();
               if (this.ctx) {
                 const audioBuffer2 = await this.ctx.decodeAudioData(arrayBuffer2);
-                this.bufferCache.set(url, audioBuffer2);
+                this.cacheBuffer(url, audioBuffer2);
                 return audioBuffer2;
               }
             }
@@ -225,6 +257,8 @@ export class AudioEngine {
           }
         }
         return null;
+      } finally {
+        this.loadingPromises.delete(url);
       }
     })();
 
@@ -275,7 +309,7 @@ export class AudioEngine {
       }
       assets.push('fanfare.mp3', 'cuckoo.mp3', 'voice_sing_with_me.wav', 'voice_great_job.wav');
     } else if (sceneId === 'old_macdonald') {
-      assets.push('cow.ogg', 'sheep.ogg', 'duck.mp3', 'animal_sprites.mp3', 'woodblock.mp3');
+      assets.push('cow.mp3', 'sheep.mp3', 'duck.mp3', 'animal_sprites.mp3', 'woodblock.mp3');
       for (const n of ['C4', 'D4', 'E4', 'G4', 'A4', 'C5']) {
         assets.push(`banjo_${n}.mp3`);
       }
@@ -283,23 +317,23 @@ export class AudioEngine {
         assets.push(`bass_${n}.mp3`);
       }
     } else if (sceneId === 'itsy_bitsy') {
-      assets.push('rain.ogg', 'slide_whistle.mp3', 'bubbles.ogg', 'woodblock.mp3', 'voice_spider_climb.wav', 'voice_spider_rain.wav', 'voice_spider_sun.wav');
+      assets.push('rain.mp3', 'slide_whistle.mp3', 'bubbles.mp3', 'woodblock.mp3', 'voice_spider_climb.wav', 'voice_spider_rain.wav', 'voice_spider_sun.wav');
       for (const n of AudioEngine.PENTATONIC_SCALE) {
         assets.push(`nylon_guitar_${n}.mp3`, `marimba_${n}.mp3`);
       }
     } else if (sceneId === 'twinkle_star') {
-      assets.push('snore.mp3', 'bubbles.ogg', 'voice_twinkle_wish.wav');
+      assets.push('snore.mp3', 'bubbles.mp3', 'voice_twinkle_wish.wav');
       for (const n of AudioEngine.BELL_SCALE) {
         assets.push(`glock_${n}.mp3`, `celesta_${n}.mp3`, `musicbox_${n}.mp3`);
       }
     } else if (sceneId === 'row_boat') {
-      assets.push('river.ogg', 'row_boat.ogg', 'splash.mp3', 'woodblock.mp3', 'bubbles.ogg', 'voice_row_boat.wav');
+      assets.push('river.mp3', 'row_boat.mp3', 'splash.mp3', 'woodblock.mp3', 'bubbles.mp3', 'voice_row_boat.wav');
       for (const n of ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5']) {
         assets.push(`harp_${n}.mp3`, `nylon_guitar_${n}.mp3`);
       }
     } else if (sceneId === 'bath_time') {
       // Scene A: Bath Time Splash & Clean
-      assets.push('squeak.mp3', 'splash.mp3', 'duck.mp3', 'dog.mp3', 'bubbles.ogg', 'woodblock.mp3', 'acoustic_shaker.mp3', 'river.ogg', 'voice_splash.wav', 'voice_clean.wav');
+      assets.push('squeak.mp3', 'splash.mp3', 'duck.mp3', 'dog.mp3', 'bubbles.mp3', 'woodblock.mp3', 'acoustic_shaker.mp3', 'river.mp3', 'voice_splash.wav', 'voice_clean.wav');
       for (const n of ['C5', 'D5', 'E5', 'G5', 'A5']) {
         assets.push(`glock_${n}.mp3`, `celesta_${n}.mp3`);
       }
@@ -575,7 +609,7 @@ export class AudioEngine {
    */
   public playBubblePop(note: string = 'C5', options: SoundOptions = {}): void {
     // Immediate acoustic bubble pop sound + crystal bell chime
-    this.playSound('bubbles.ogg', { volume: 0.75, offset: 0.05, duration: 0.25 });
+    this.playSound('bubbles.mp3', { volume: 0.75, offset: 0.05, duration: 0.25 });
     this.playInstrumentNote('glock', note, { volume: 0.8, pitch: 1.0 + (Math.random() - 0.5) * 0.05, ...options });
   }
 
@@ -605,7 +639,7 @@ export class AudioEngine {
     if (!this.ctx) await this.unlock();
     if (!this.ctx || this.faucetSource) return;
 
-    const buffer = await this.loadBuffer('river.ogg');
+    const buffer = await this.loadBuffer('river.mp3');
     if (!buffer) {
       // Fallback synthesizer trickle
       this.synthesizeWaterTrickle(true);
@@ -660,12 +694,17 @@ export class AudioEngine {
     if (fallbackText && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel(); // Stop any previous speech so voices don't talk over each other
+        const lang = appPrefs.get().language === 'fr' ? 'fr' : 'en';
         const utter = new SpeechSynthesisUtterance(fallbackText);
+        utter.lang = lang === 'fr' ? 'fr-FR' : 'en-US';
         utter.rate = 0.92;
         utter.pitch = 1.25; // Warm, friendly pitch for toddlers
-        utter.volume = volume;
+        utter.volume = volume * appPrefs.get().masterVolume;
         const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Natural')));
+        const preferred = voices.find(v =>
+          v.lang.toLowerCase().startsWith(lang) &&
+          (v.name.includes('Samantha') || v.name.includes('Amelie') || v.name.includes('Thomas') || v.name.includes('Zira') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Natural'))
+        ) || voices.find(v => v.lang.toLowerCase().startsWith(lang));
         if (preferred) utter.voice = preferred;
         window.speechSynthesis.speak(utter);
       } catch {}
@@ -693,8 +732,10 @@ export class AudioEngine {
       const notes = ['C5', 'E5', 'G5', 'C6'];
       notes.forEach((n, idx) => {
         const time = now + idx * 0.08;
-        this.playSound(`xylo_${n}.mp3`, { volume: 0.85, time });
-        this.playSound(`glock_${n}.mp3`, { volume: 0.7, time });
+        if (n !== 'E5') {
+          this.playSound(`xylo_${n}.mp3`, { volume: 0.85, time });
+        }
+        this.playInstrumentNote('glock', n, { volume: 0.75, time });
       });
       this.playSound('chime.mp3', { volume: 0.8, time: now + 0.35 });
     }
@@ -717,9 +758,9 @@ export class AudioEngine {
     } else if (type === 'dog') {
       this.playSound('dog.mp3', { volume: 0.9 });
     } else if (type === 'cow') {
-      this.playSound('cow.ogg', { volume: 0.85 });
+      this.playSound('cow.mp3', { volume: 0.85 });
     } else if (type === 'sheep') {
-      this.playSound('sheep.ogg', { volume: 0.85 });
+      this.playSound('sheep.mp3', { volume: 0.85 });
     } else if (type === 'duck') {
       this.playSound('duck.mp3', { volume: 0.85 });
     }
@@ -757,17 +798,17 @@ export class AudioEngine {
         this.playSound('acoustic_egg_shaker.mp3', { time, volume: 0.4 });
       }
 
-      // Ukulele Swing Strum on the beat
+      // Ukulele Swing Strum on the beat (uses pitch-shifting fallback for F4/B4)
       chord.forEach((note, idx) => {
         const strumOffset = time + (idx * 0.015);
-        this.playSound(`nylon_guitar_${note}.mp3`, { time: strumOffset, volume: 0.42 });
-        this.playSound(`banjo_${note}.mp3`, { time: strumOffset, volume: 0.25 });
+        this.playInstrumentNote('nylon_guitar', note, { time: strumOffset, volume: 0.42 });
+        this.playInstrumentNote('banjo', note, { time: strumOffset, volume: 0.25 });
       });
 
       // Swing offbeat 8th note strum
       const swing8th = time + (60.0 / 110) * 0.62;
       chord.slice(1).forEach((note, idx) => {
-        this.playSound(`nylon_guitar_${note}.mp3`, { time: swing8th + (idx * 0.012), volume: 0.3 });
+        this.playInstrumentNote('nylon_guitar', note, { time: swing8th + (idx * 0.012), volume: 0.3 });
       });
     });
   }
@@ -815,14 +856,14 @@ export class AudioEngine {
       // Gentle acoustic egg shaker
       this.playSound('acoustic_egg_shaker.mp3', { time, volume: 0.35 });
 
-      // Acoustic fingerpicking arpeggio
+      // Acoustic fingerpicking arpeggio (uses pitch-shifting fallback for B4/G5/A5/E5)
       const noteToPick = pickPattern[beatInMeasure % pickPattern.length];
-      this.playSound(`nylon_guitar_${noteToPick}.mp3`, { time, volume: 0.5 });
+      this.playInstrumentNote('nylon_guitar', noteToPick, { time, volume: 0.5 });
 
       // Folk offbeat finger flick
       const offbeatTime = time + (60.0 / 95) * 0.5;
       const offbeatNote = pickPattern[(beatInMeasure + 2) % pickPattern.length];
-      this.playSound(`nylon_guitar_${offbeatNote}.mp3`, { time: offbeatTime, volume: 0.38 });
+      this.playInstrumentNote('nylon_guitar', offbeatNote, { time: offbeatTime, volume: 0.38 });
     });
   }
 
@@ -1241,6 +1282,70 @@ export class AudioEngine {
   }
 
   /**
+   * Unified streaming vocal song player routed through musicGain -> Compressor -> MasterGain.
+   * Guarantees Master Volume controls all scene vocal songs and stopAllAudio() silences them.
+   */
+  public async playVocalTrack(audioPath: string, onEnded?: () => void): Promise<boolean> {
+    if (!this.ctx) await this.unlock();
+    this.stopVocalTrack();
+
+    if (typeof window === 'undefined') return false;
+
+    if (!this.vocalAudioEl) {
+      this.vocalAudioEl = new Audio();
+      this.vocalAudioEl.crossOrigin = 'anonymous';
+      this.vocalAudioEl.preload = 'auto';
+      this.vocalAudioEl.addEventListener('ended', () => {
+        this.isVocalTrackPlaying = false;
+        const cb = this.vocalEndedCallback;
+        this.vocalEndedCallback = null;
+        if (cb) cb();
+      });
+    }
+
+    if (this.ctx && !this.vocalMediaSource && this.musicGain) {
+      try {
+        this.vocalMediaSource = this.ctx.createMediaElementSource(this.vocalAudioEl);
+        this.vocalGainNode = this.ctx.createGain();
+        this.vocalGainNode.gain.setValueAtTime(0.95, this.ctx.currentTime);
+        this.vocalMediaSource.connect(this.vocalGainNode);
+        this.vocalGainNode.connect(this.musicGain);
+      } catch {
+        // Already connected fallback
+      }
+    }
+
+    this.vocalEndedCallback = onEnded || null;
+    try {
+      this.vocalAudioEl.src = this.resolveAudioPath(audioPath);
+      this.vocalAudioEl.currentTime = 0;
+      await this.vocalAudioEl.play();
+      this.isVocalTrackPlaying = true;
+      return true;
+    } catch (err) {
+      console.warn('Vocal track play warning:', err);
+      this.isVocalTrackPlaying = false;
+      return false;
+    }
+  }
+
+  public stopVocalTrack(): void {
+    this.isVocalTrackPlaying = false;
+    this.vocalEndedCallback = null;
+    if (this.vocalAudioEl) {
+      try {
+        this.vocalAudioEl.pause();
+        this.vocalAudioEl.currentTime = 0;
+        this.vocalAudioEl.removeAttribute('src');
+      } catch {}
+    }
+  }
+
+  public get isVocalPlaying(): boolean {
+    return this.isVocalTrackPlaying;
+  }
+
+  /**
    * Stops all active audio loops and schedulers during scene transitions.
    */
   public stopAllLoops(): void {
@@ -1250,6 +1355,7 @@ export class AudioEngine {
     this.stopUkuleleSwingGroove();
     this.stopMeadowFolkGroove();
     this.pauseSongTrack();
+    this.stopVocalTrack();
     this.stopScheduler();
   }
 

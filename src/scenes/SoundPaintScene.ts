@@ -54,6 +54,7 @@ export class SoundPaintScene implements StorybookScene {
   private canvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
   private animFrameId: number = 0;
+  private resizeHandler: (() => void) | null = null;
 
   // Active multi-touch pointers (up to 5 concurrent fingers)
   private activePointers: Map<number, ActivePointer> = new Map();
@@ -365,6 +366,7 @@ export class SoundPaintScene implements StorybookScene {
    * 60 FPS Fluid Watercolor Ribbon & Stardust Render Loop.
    */
   private startRenderLoop(): void {
+    cancelAnimationFrame(this.animFrameId);
     const canvas = this.canvas;
     const ctx = this.ctx;
 
@@ -377,7 +379,11 @@ export class SoundPaintScene implements StorybookScene {
     };
 
     resize();
-    window.addEventListener('resize', resize);
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+    this.resizeHandler = resize;
+    window.addEventListener('resize', this.resizeHandler);
 
     const render = () => {
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -480,6 +486,11 @@ export class SoundPaintScene implements StorybookScene {
     this.isActive = false;
     this.element.style.display = 'none';
     cancelAnimationFrame(this.animFrameId);
+    this.animFrameId = 0;
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
     this.activePointers.clear();
     this.fadingStrokes = [];
   }

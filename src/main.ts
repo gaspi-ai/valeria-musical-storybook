@@ -23,6 +23,7 @@ import { BathTimeScene } from './scenes/BathTimeScene';
 import { PeekabooMeadowScene } from './scenes/PeekabooMeadowScene';
 import { SoundPaintScene } from './scenes/SoundPaintScene';
 import { SongsJukebox } from './components/SongsJukebox';
+import { appPrefs } from './state/AppPreferences';
 
 class ToddlerStorybookApp {
   private appRoot: HTMLElement;
@@ -92,18 +93,20 @@ class ToddlerStorybookApp {
       },
       onAudioModeChange: (mode) => this.setAudioMode(mode),
       onInstrumentChange: (inst) => this.setInstrument(inst),
+      onInfantLockChange: (locked) => this.handleInfantLockChange(locked),
       onOpenJukebox: () => this.openJukebox()
     });
 
-    // Sync SceneManager events back to Parent Gate
+    // Apply persisted instrument preference
+    this.musicalMeScene.setInstrument(appPrefs.get().instrument);
+
+    // Sync SceneManager events back to Parent Gate & Preferences
     this.sceneManager.onSceneChange((sceneId) => {
       this.parentGate.setScene(sceneId);
+      appPrefs.update({ lastScene: sceneId });
     });
 
-    // 6. Preload Audio in Background
-    this.engine.preloadAll().catch(console.warn);
-
-    // 7. Graceful "Tap to Play" Audio Unlock Screen
+    // 6. Graceful "Tap to Play" Audio Unlock Screen (Audio preloads lazily per scene after unlock)
     new IntroScreen(this.appRoot, this.bursts, () => {
       this.startApp();
     });
@@ -112,9 +115,27 @@ class ToddlerStorybookApp {
   /**
    * Starts the initial scene once audio is unlocked.
    */
-  private startApp(): void {
-    this.sceneManager.switchScene('wheels');
-    this.ensemble.start();
+  private async startApp(): Promise<void> {
+    const prefs = appPrefs.get();
+    this.engine.setMasterVolume(prefs.masterVolume);
+    await this.sceneManager.switchScene(prefs.lastScene || 'wheels');
+
+    // Apply persisted audio mode for initial scene
+    if (this.sceneManager.getActiveSceneId() === 'wheels') {
+      this.setAudioMode(prefs.audioMode);
+    }
+
+    // Restore infant lock state if previously active
+    if (prefs.infantLock) {
+      this.parentGate.toggleInfantLock();
+    }
+  }
+
+  private handleInfantLockChange(locked: boolean): void {
+    // Hide the exposed floating SONGS button while Infant Lock is active so a 1-year-old cannot accidentally exit
+    if (this.floatingJukeboxBtn) {
+      this.floatingJukeboxBtn.style.display = locked ? 'none' : 'flex';
+    }
   }
 
   /**
@@ -185,12 +206,12 @@ class ToddlerStorybookApp {
    * Called when returning from Jukebox to Storybook.
    */
   private handleExitJukebox(): void {
-    this.floatingJukeboxBtn.style.display = 'flex';
+    this.floatingJukeboxBtn.style.display = appPrefs.get().infantLock ? 'none' : 'flex';
     this.engine.stopAllAudio();
     this.sceneManager.activateActiveScene();
     const activeId = this.sceneManager.getActiveSceneId();
     if (activeId === 'wheels') {
-      this.ensemble.start();
+      this.setAudioMode(appPrefs.get().audioMode);
     }
   }
 
@@ -249,3 +270,12 @@ class ToddlerStorybookApp {
 window.addEventListener('DOMContentLoaded', () => {
   new ToddlerStorybookApp();
 });
+
+// Register offline-first Service Worker for iPhone/iPad PWA support
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {
+      // Ignore SW registration failure on unsupported/insecure contexts
+    });
+  });
+}

@@ -38,7 +38,6 @@ export class ItsyBitsySpiderScene implements StorybookScene {
   // State
   private isActive: boolean = false;
   private activeTimeouts: Set<number> = new Set();
-  private vocalAudio: HTMLAudioElement | null = null;
   private isVocalPlaying: boolean = false;
   private spiderStepIndex: number = 0; // 0 (bottom in flower bed) to 7 (top of spout)
   private isRaining: boolean = false;
@@ -297,21 +296,16 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     }
   }
 
-  private startVocalSong(): void {
+  private async startVocalSong(): Promise<void> {
     this.stopVocalSong();
     const btn = this.element.querySelector('#btn-spider-sing') as HTMLElement;
     if (btn) btn.classList.add('active');
-
-    try {
-      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/itsy_bitsy.mp3'));
-      this.vocalAudio.volume = 0.95;
-      this.isVocalPlaying = true;
-      this.vocalAudio.play().catch(e => console.warn('Itsy bitsy vocal song play warning:', e));
-      this.vocalAudio.onended = () => {
-        this.stopVocalSong();
-      };
-    } catch (e) {
-      console.warn('Could not start vocal song:', e);
+    this.isVocalPlaying = true;
+    const ok = await this.engine.playVocalTrack('songs/itsy_bitsy.mp3', () => {
+      this.stopVocalSong();
+    });
+    if (!ok) {
+      this.stopVocalSong();
     }
   }
 
@@ -319,13 +313,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     this.isVocalPlaying = false;
     const btn = this.element.querySelector('#btn-spider-sing') as HTMLElement;
     if (btn) btn.classList.remove('active');
-    if (this.vocalAudio) {
-      this.vocalAudio.pause();
-      this.vocalAudio.currentTime = 0;
-      this.vocalAudio.removeAttribute('src');
-      this.vocalAudio.load();
-      this.vocalAudio = null;
-    }
+    this.engine.stopVocalTrack();
   }
 
   /**
@@ -382,7 +370,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     this.engine.playVoice('voice_spider_rain.wav', 'Down came the rain and washed the spider out!', 0.9);
 
     // Soft acoustic rain trickle loop
-    this.engine.playAmbientSound('rain.ogg', 0.45);
+    this.engine.playAmbientSound('rain.mp3', 0.45);
     this.bursts.spawnWaterSplash(cx || window.innerWidth * 0.3, cy || window.innerHeight * 0.25, 14);
 
     // Cascading rain particles
@@ -419,7 +407,7 @@ export class ItsyBitsySpiderScene implements StorybookScene {
     // Slide whistle falling sound + bubble pop!
     this.engine.playSound('slide_whistle.mp3', { volume: 0.85 });
     this.safeTimeout(() => {
-      this.engine.playSound('bubbles.ogg', { volume: 0.8 });
+      this.engine.playSound('bubbles.mp3', { volume: 0.8 });
       this.engine.playSound('splash.mp3', { volume: 0.7, pitch: 1.1 });
     }, 700);
 

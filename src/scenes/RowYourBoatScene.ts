@@ -48,7 +48,6 @@ export class RowYourBoatScene implements StorybookScene {
   // State
   private isActive: boolean = false;
   private activeTimeouts: Set<number> = new Set();
-  private vocalAudio: HTMLAudioElement | null = null;
   private isVocalPlaying: boolean = false;
 
   // Water physics state
@@ -259,7 +258,7 @@ export class RowYourBoatScene implements StorybookScene {
     this.isActive = true;
     this.element.style.display = 'block';
     // Gentle flowing river background sound
-    this.engine.playAmbientSound('river.ogg', 0.4);
+    this.engine.playAmbientSound('river.mp3', 0.4);
     this.startWaterRippleLoop();
     this.playInitialHarpStrum();
   }
@@ -281,21 +280,16 @@ export class RowYourBoatScene implements StorybookScene {
     }
   }
 
-  private startVocalSong(): void {
+  private async startVocalSong(): Promise<void> {
     this.stopVocalSong();
     const btn = this.element.querySelector('#btn-river-sing') as HTMLElement;
     if (btn) btn.classList.add('active');
-
-    try {
-      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/row_boat.mp3'));
-      this.vocalAudio.volume = 0.95;
-      this.isVocalPlaying = true;
-      this.vocalAudio.play().catch(e => console.warn('Row boat vocal song play warning:', e));
-      this.vocalAudio.onended = () => {
-        this.stopVocalSong();
-      };
-    } catch (e) {
-      console.warn('Could not start vocal song:', e);
+    this.isVocalPlaying = true;
+    const ok = await this.engine.playVocalTrack('songs/row_boat.mp3', () => {
+      this.stopVocalSong();
+    });
+    if (!ok) {
+      this.stopVocalSong();
     }
   }
 
@@ -303,13 +297,7 @@ export class RowYourBoatScene implements StorybookScene {
     this.isVocalPlaying = false;
     const btn = this.element.querySelector('#btn-river-sing') as HTMLElement;
     if (btn) btn.classList.remove('active');
-    if (this.vocalAudio) {
-      this.vocalAudio.pause();
-      this.vocalAudio.currentTime = 0;
-      this.vocalAudio.removeAttribute('src');
-      this.vocalAudio.load();
-      this.vocalAudio = null;
-    }
+    this.engine.stopVocalTrack();
   }
 
   /**
@@ -327,7 +315,7 @@ export class RowYourBoatScene implements StorybookScene {
     this.oarRightEl.classList.add('oar-stroke');
 
     // Play real rowing water splash sound
-    this.engine.playSound('row_boat.ogg', { volume: 0.85 });
+    this.engine.playSound('row_boat.mp3', { volume: 0.85 });
     this.engine.playSound('splash.mp3', { volume: 0.55, pitch: 1.15 });
 
     // Play next note of "Row, Row, Row Your Boat" on acoustic harp
@@ -361,7 +349,7 @@ export class RowYourBoatScene implements StorybookScene {
     if (!this.isActive) return;
 
     this.engine.playSound('woodblock.mp3', { volume: 0.8, pitch: 1.25 });
-    this.engine.playSound('bubbles.ogg', { volume: 0.6 });
+    this.engine.playSound('bubbles.mp3', { volume: 0.6 });
 
     lilyEl.classList.remove('lily-dip');
     void lilyEl.offsetWidth;
@@ -401,7 +389,7 @@ export class RowYourBoatScene implements StorybookScene {
 
   private triggerRiverTap(cx: number, cy: number): void {
     if (!this.isActive) return;
-    this.engine.playSound('bubbles.ogg', { volume: 0.55 });
+    this.engine.playSound('bubbles.mp3', { volume: 0.55 });
     this.bursts.spawnWaterSplash(cx, cy, 8);
     if (Math.random() < 0.4) {
       this.triggerJumpingFish(cx, cy);

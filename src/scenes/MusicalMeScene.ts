@@ -51,7 +51,6 @@ export class MusicalMeScene implements StorybookScene {
   // Call & response state
   private isActive: boolean = false;
   private activeTimeouts: Set<number> = new Set();
-  private vocalAudio: HTMLAudioElement | null = null;
   private isVocalPlaying: boolean = false;
   private isCallResponseActive: boolean = false;
   private promptPadIndex: number = 0;
@@ -110,21 +109,16 @@ export class MusicalMeScene implements StorybookScene {
     }
   }
 
-  private startVocalSong(): void {
+  private async startVocalSong(): Promise<void> {
     this.stopVocalSong();
     const btn = this.element.querySelector('#btn-musical-me-sing') as HTMLElement;
     if (btn) btn.classList.add('active');
-
-    try {
-      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/sunshine.mp3'));
-      this.vocalAudio.volume = 0.95;
-      this.isVocalPlaying = true;
-      this.vocalAudio.play().catch(e => console.warn('Sunshine vocal song play warning:', e));
-      this.vocalAudio.onended = () => {
-        this.stopVocalSong();
-      };
-    } catch (e) {
-      console.warn('Could not start vocal song:', e);
+    this.isVocalPlaying = true;
+    const ok = await this.engine.playVocalTrack('songs/sunshine.mp3', () => {
+      this.stopVocalSong();
+    });
+    if (!ok) {
+      this.stopVocalSong();
     }
   }
 
@@ -132,13 +126,7 @@ export class MusicalMeScene implements StorybookScene {
     this.isVocalPlaying = false;
     const btn = this.element.querySelector('#btn-musical-me-sing') as HTMLElement;
     if (btn) btn.classList.remove('active');
-    if (this.vocalAudio) {
-      this.vocalAudio.pause();
-      this.vocalAudio.currentTime = 0;
-      this.vocalAudio.removeAttribute('src');
-      this.vocalAudio.load();
-      this.vocalAudio = null;
-    }
+    this.engine.stopVocalTrack();
   }
 
   public setInstrument(inst: InstrumentType): void {

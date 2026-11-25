@@ -4,7 +4,6 @@
    Inspired by classic Duck Duck Moose apps ("Wheels on the Bus", "Musical Me")
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
 @import './scenes.css';
 @import './jukebox.css';
 
@@ -19,7 +18,7 @@
   --color-road-stripe: #F4A261;
   --color-card-bg: rgba(255, 255, 255, 0.95);
   --color-text-dark: #1D3557;
-  --font-storybook: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-storybook: 'SF Pro Rounded', 'Nunito', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Native Dynamic Viewport Safe Areas */
   --safe-top: env(safe-area-inset-top, 0px);

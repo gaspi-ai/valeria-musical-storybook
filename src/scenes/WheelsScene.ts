@@ -34,8 +34,6 @@ export class WheelsScene implements StorybookScene {
   // State
   private isActive: boolean = false;
   private activeTimeouts: Set<number> = new Set();
-  private vocalAudio: HTMLAudioElement | null = null;
-  private isVocalPlaying: boolean = false;
 
   // Wheel physics state
   private wheelAngle: number = 0;
@@ -124,43 +122,31 @@ export class WheelsScene implements StorybookScene {
     }
   }
 
-  public toggleVocalSong(): void {
-    if (this.isVocalPlaying) {
-      this.stopVocalSong();
-    } else {
-      this.startVocalSong();
-    }
-  }
-
-  private startVocalSong(): void {
-    this.stopVocalSong();
+  public async toggleVocalSong(): Promise<void> {
+    const songBtn = this.element.querySelector('#wheels-song-btn') as HTMLElement | null;
     const signText = this.element.querySelector('#bus-sign-text');
-    if (signText) signText.textContent = '🎶 SINGING... 🎵';
+    const isPlaying = await this.engine.toggleSongTrack();
 
-    try {
-      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/monkeys.mp3'));
-      this.vocalAudio.volume = 0.95;
-      this.isVocalPlaying = true;
-      this.vocalAudio.play().catch(e => console.warn('Bus vocal song play warning:', e));
-      this.vocalAudio.onended = () => {
-        this.stopVocalSong();
-      };
-    } catch (e) {
-      console.warn('Could not start vocal song:', e);
+    if (isPlaying) {
+      songBtn?.classList.add('playing');
+      if (signText) signText.textContent = '🎶 SINGING... 🎵';
+      this.ensemble.stop();
+      this.engine.startScheduler(104);
+    } else {
+      songBtn?.classList.remove('playing');
+      if (signText) signText.textContent = '🎵 SING ALONG 🎶';
+      if (this.isActive) {
+        this.ensemble.start();
+      }
     }
   }
 
   private stopVocalSong(): void {
-    this.isVocalPlaying = false;
+    const songBtn = this.element.querySelector('#wheels-song-btn') as HTMLElement | null;
+    songBtn?.classList.remove('playing');
     const signText = this.element.querySelector('#bus-sign-text');
     if (signText) signText.textContent = '🎵 SING ALONG 🎶';
-    if (this.vocalAudio) {
-      this.vocalAudio.pause();
-      this.vocalAudio.currentTime = 0;
-      this.vocalAudio.removeAttribute('src');
-      this.vocalAudio.load();
-      this.vocalAudio = null;
-    }
+    this.engine.pauseSongTrack();
   }
 
   private render(): void {
@@ -533,30 +519,21 @@ export class WheelsScene implements StorybookScene {
       this.triggerWipers(e.clientX, e.clientY);
     });
 
-    // 5. Sing Along Button
+    // 5. Sing Along Button (synced with roof sign)
     const songBtn = this.element.querySelector('#wheels-song-btn') as HTMLElement;
     songBtn.addEventListener('pointerdown', async (e: PointerEvent) => {
       e.preventDefault();
       e.stopPropagation();
       this.bursts.spawnBurst(e.clientX, e.clientY, 16, '#06D6A0');
-
-      const isPlaying = await this.engine.toggleSongTrack();
-      if (isPlaying) {
-        songBtn.classList.add('playing');
-        this.ensemble.stop();
-        this.engine.startScheduler(104);
-      } else {
-        songBtn.classList.remove('playing');
-        this.ensemble.start();
-      }
+      await this.toggleVocalSong();
     });
 
-    // 5. Roof Sign Tap -> Sing along vocal song
+    // Roof Sign Tap -> toggles the same Wheels on the Bus sing-along track
     const signEl = this.element.querySelector('#bus-roof-sign');
-    signEl?.addEventListener('pointerdown', (e: Event) => {
+    signEl?.addEventListener('pointerdown', async (e: Event) => {
       e.preventDefault();
       e.stopPropagation();
-      this.toggleVocalSong();
+      await this.toggleVocalSong();
     });
 
     // 6. Passengers Tap Reactions

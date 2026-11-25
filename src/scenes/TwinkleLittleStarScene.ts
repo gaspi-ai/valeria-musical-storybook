@@ -64,7 +64,6 @@ export class TwinkleLittleStarScene implements StorybookScene {
   private isActive: boolean = false;
   private activeTimeouts: Set<number> = new Set();
   private zzzInterval: number | null = null;
-  private vocalAudio: HTMLAudioElement | null = null;
   private isVocalPlaying: boolean = false;
   private lastDragNoteTime: number = 0;
   private isDraggingConstellation: boolean = false;
@@ -300,23 +299,18 @@ export class TwinkleLittleStarScene implements StorybookScene {
     }
   }
 
-  private startVocalSong(): void {
+  private async startVocalSong(): Promise<void> {
     this.stopVocalSong();
     this.stopLullaby();
 
     const btn = this.element.querySelector('#btn-toggle-sing') as HTMLElement;
     if (btn) btn.classList.add('active');
-
-    try {
-      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/twinkle.mp3'));
-      this.vocalAudio.volume = 0.95;
-      this.isVocalPlaying = true;
-      this.vocalAudio.play().catch(e => console.warn('Twinkle vocal song play warning:', e));
-      this.vocalAudio.onended = () => {
-        this.stopVocalSong();
-      };
-    } catch (e) {
-      console.warn('Could not start vocal song:', e);
+    this.isVocalPlaying = true;
+    const ok = await this.engine.playVocalTrack('songs/twinkle.mp3', () => {
+      this.stopVocalSong();
+    });
+    if (!ok) {
+      this.stopVocalSong();
     }
   }
 
@@ -324,13 +318,7 @@ export class TwinkleLittleStarScene implements StorybookScene {
     this.isVocalPlaying = false;
     const btn = this.element.querySelector('#btn-toggle-sing') as HTMLElement;
     if (btn) btn.classList.remove('active');
-    if (this.vocalAudio) {
-      this.vocalAudio.pause();
-      this.vocalAudio.currentTime = 0;
-      this.vocalAudio.removeAttribute('src');
-      this.vocalAudio.load();
-      this.vocalAudio = null;
-    }
+    this.engine.stopVocalTrack();
   }
 
   /**
@@ -430,7 +418,7 @@ export class TwinkleLittleStarScene implements StorybookScene {
 
     bubble.addEventListener('pointerdown', (e: PointerEvent) => {
       e.stopPropagation();
-      this.engine.playSound('bubbles.ogg', { volume: 0.7 });
+      this.engine.playSound('bubbles.mp3', { volume: 0.7 });
       this.bursts.spawnStarGlow(e.clientX, e.clientY, 8, '#FFD166');
       bubble.remove();
     });

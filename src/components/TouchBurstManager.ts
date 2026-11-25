@@ -106,7 +106,7 @@ export class TouchBurstManager {
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
-    this.start();
+    // Loop starts on-demand when particles/ripples are spawned (saves mobile battery)
   }
 
   private resize(): void {
@@ -118,6 +118,7 @@ export class TouchBurstManager {
   }
 
   private getPooledParticle(): Particle {
+    this.start();
     const p = this.particlePool.pop() || {
       x: 0,
       y: 0,
@@ -148,6 +149,7 @@ export class TouchBurstManager {
   }
 
   private getPooledRipple(): Ripple {
+    this.start();
     const r = this.ripplePool.pop() || {
       x: 0,
       y: 0,
@@ -412,6 +414,11 @@ export class TouchBurstManager {
     this.isRunning = true;
     const loop = () => {
       this.updateAndRender();
+      if (this.particles.length === 0 && this.ripples.length === 0) {
+        this.isRunning = false;
+        this.animationId = 0;
+        return;
+      }
       if (this.isRunning) {
         this.animationId = requestAnimationFrame(loop);
       }

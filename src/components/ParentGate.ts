@@ -10,11 +10,14 @@
 
 import { AudioEngine } from '../audio/AudioEngine';
 import type { InstrumentType } from '../audio/AudioEngine';
+import { appPrefs, type AppLanguage } from '../state/AppPreferences';
 
 export interface ParentGateCallbacks {
   onSceneChange: (scene: string) => void;
   onAudioModeChange: (mode: 'song' | 'ensemble' | 'free') => void;
   onInstrumentChange: (inst: InstrumentType) => void;
+  onLanguageChange?: (lang: AppLanguage) => void;
+  onInfantLockChange?: (locked: boolean) => void;
   onOpenJukebox?: () => void;
 }
 
@@ -38,9 +41,10 @@ export class ParentGate {
   private isInfantLockActive: boolean = false;
   private wakeLockSentinel: unknown = null;
 
-  private currentScene: string = 'wheels';
-  private currentAudioMode: 'song' | 'ensemble' | 'free' = 'song';
-  private currentInstrument: InstrumentType = 'marimba';
+  private currentScene: string = appPrefs.get().lastScene;
+  private currentAudioMode: 'song' | 'ensemble' | 'free' = appPrefs.get().audioMode;
+  private currentInstrument: InstrumentType = appPrefs.get().instrument;
+  private currentLanguage: AppLanguage = appPrefs.get().language;
 
   constructor(container: HTMLElement, callbacks: ParentGateCallbacks) {
     this.container = container;
@@ -241,12 +245,25 @@ export class ParentGate {
             </div>
           </div>
 
+          <!-- Language Selector (English / Français) -->
+          <div class="parent-section">
+            <label class="parent-label">Voice & Learning Language:</label>
+            <div class="parent-btn-group">
+              <button class="lang-select-btn ${this.currentLanguage === 'en' ? 'active' : ''}" data-lang="en">
+                🇬🇧 English
+              </button>
+              <button class="lang-select-btn ${this.currentLanguage === 'fr' ? 'active' : ''}" data-lang="fr">
+                🇫🇷 Français
+              </button>
+            </div>
+          </div>
+
           <!-- Volume Controls -->
           <div class="parent-section parent-slider-row">
             <label class="parent-label">Master Volume:</label>
             <div class="volume-slider-wrap">
               <span>🔈</span>
-              <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="0.85" />
+              <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="${appPrefs.get().masterVolume}" />
               <span>🔊</span>
             </div>
           </div>
@@ -405,19 +422,13 @@ export class ParentGate {
     const closeBtn = this.modalOverlay.querySelector('.parent-close-btn') as HTMLElement;
     const resumeBtn = this.modalOverlay.querySelector('.parent-resume-btn') as HTMLElement;
     
-    const handleSaveAndResume = (e?: Event) => {
-      if (e && e.cancelable) e.preventDefault();
+    const handleSaveAndResume = () => {
       this.closeModal();
       this.engine.playSound('chime.mp3', { volume: 0.7 });
       this.showToast('✨ Settings Saved! ✨');
     };
     resumeBtn.addEventListener('click', handleSaveAndResume);
-    resumeBtn.addEventListener('touchend', handleSaveAndResume);
     closeBtn.addEventListener('click', () => this.closeModal());
-    closeBtn.addEventListener('touchend', (e) => {
-      if (e && e.cancelable) e.preventDefault();
-      this.closeModal();
-    });
 
     // Toggle Infant Lock inside modal
     const modalLockBtn = this.modalOverlay.querySelector('#btn-toggle-infant-lock') as HTMLElement;
@@ -447,34 +458,26 @@ export class ParentGate {
     const guideCloseBtn = this.guideModalOverlay.querySelector('.guide-close-btn') as HTMLElement;
     const guideDoneBtn = this.guideModalOverlay.querySelector('.guide-done-btn') as HTMLElement;
     guideCloseBtn.addEventListener('click', () => this.closeGuideModal());
-    guideCloseBtn.addEventListener('touchend', (e) => {
-      if (e && e.cancelable) e.preventDefault();
-      this.closeGuideModal();
-    });
 
-    const handleGuideDone = (e?: Event) => {
-      if (e && e.cancelable) e.preventDefault();
+    const handleGuideDone = () => {
       this.closeGuideModal();
       this.closeModal();
       this.showToast('🔒 Triple-click Side Button on iPhone for Total Lock!');
     };
     guideDoneBtn.addEventListener('click', handleGuideDone);
-    guideDoneBtn.addEventListener('touchend', handleGuideDone);
 
-    // Scene Switch buttons
+    // Scene Switch buttons (click-only so scrolling inside the modal never triggers accidental taps)
     const sceneBtns = this.modalOverlay.querySelectorAll('.scene-select-btn');
     sceneBtns.forEach(btn => {
-      const handleSelectScene = (e?: Event) => {
-        if (e && e.cancelable && e.type === 'touchend') e.preventDefault();
+      btn.addEventListener('click', () => {
         sceneBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const scene = btn.getAttribute('data-scene') || 'wheels';
         this.currentScene = scene;
+        appPrefs.update({ lastScene: scene });
         this.callbacks.onSceneChange(scene);
         this.engine.playSound('chime.mp3', { volume: 0.6 });
-      };
-      btn.addEventListener('click', handleSelectScene);
-      btn.addEventListener('touchend', handleSelectScene);
+      });
     });
 
     // Audio Mode buttons
@@ -485,6 +488,7 @@ export class ParentGate {
         btn.classList.add('active');
         const mode = btn.getAttribute('data-mode') as 'song' | 'ensemble' | 'free';
         this.currentAudioMode = mode;
+        appPrefs.update({ audioMode: mode });
         this.callbacks.onAudioModeChange(mode);
         this.engine.playSound('boing.mp3', { volume: 0.5 });
       });
@@ -498,15 +502,32 @@ export class ParentGate {
         btn.classList.add('active');
         const inst = btn.getAttribute('data-inst') as InstrumentType;
         this.currentInstrument = inst;
+        appPrefs.update({ instrument: inst });
         this.callbacks.onInstrumentChange(inst);
         this.engine.playInstrumentNote(inst, 'C5', { volume: 0.7 });
+      });
+    });
+
+    // Language buttons (English / Français)
+    const langBtns = this.modalOverlay.querySelectorAll('.lang-select-btn');
+    langBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        langBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const lang = (btn.getAttribute('data-lang') === 'fr' ? 'fr' : 'en') as AppLanguage;
+        this.currentLanguage = lang;
+        appPrefs.update({ language: lang });
+        this.callbacks.onLanguageChange?.(lang);
+        this.engine.playSound('chime.mp3', { volume: 0.65 });
       });
     });
 
     // Volume Slider
     const volSlider = this.modalOverlay.querySelector('.volume-slider') as HTMLInputElement;
     volSlider.addEventListener('input', () => {
-      this.engine.setMasterVolume(parseFloat(volSlider.value));
+      const vol = parseFloat(volSlider.value);
+      appPrefs.update({ masterVolume: vol });
+      this.engine.setMasterVolume(vol);
     });
 
     // Fullscreen Toggle
@@ -537,6 +558,8 @@ export class ParentGate {
       this.showToast('🔓 Infant Lock Disabled');
     }
 
+    appPrefs.update({ infantLock: this.isInfantLockActive });
+    this.callbacks.onInfantLockChange?.(this.isInfantLockActive);
     this.updateModalLockBtnState();
   }
 

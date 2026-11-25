@@ -53,7 +53,6 @@ export class OldMacDonaldScene implements StorybookScene {
   private banjoTimer: number | null = null;
   private isPlayingMusic: boolean = false;
   private isVocalSongPlaying: boolean = false;
-  private vocalSongNode: AudioBufferSourceNode | null = null;
   private activeTimeouts: Set<number> = new Set();
 
   constructor(container: HTMLElement, bursts: TouchBurstManager) {
@@ -388,19 +387,20 @@ export class OldMacDonaldScene implements StorybookScene {
     }
   }
 
-  public startVocalSong(): void {
+  public async startVocalSong(): Promise<void> {
     this.stopFarmBanjoGroove();
     this.stopVocalSong();
     this.isVocalSongPlaying = true;
     const btn = this.element.querySelector('#btn-farm-sing') as HTMLElement;
     if (btn) btn.innerText = '⏸ PAUSE';
 
-    this.vocalSongNode = this.engine.playSound('songs/old_macdonald.mp3', { volume: 0.95 });
-    if (this.vocalSongNode) {
-      this.vocalSongNode.onended = () => {
-        this.stopVocalSong();
-        if (this.isActive) this.startFarmBanjoGroove();
-      };
+    const ok = await this.engine.playVocalTrack('songs/old_macdonald.mp3', () => {
+      this.stopVocalSong();
+      if (this.isActive) this.startFarmBanjoGroove();
+    });
+    if (!ok) {
+      this.stopVocalSong();
+      if (this.isActive) this.startFarmBanjoGroove();
     }
   }
 
@@ -408,13 +408,7 @@ export class OldMacDonaldScene implements StorybookScene {
     this.isVocalSongPlaying = false;
     const btn = this.element.querySelector('#btn-farm-sing') as HTMLElement;
     if (btn) btn.innerText = '🎶 SING!';
-    if (this.vocalSongNode) {
-      try {
-        this.vocalSongNode.stop();
-        this.vocalSongNode.disconnect();
-      } catch {}
-      this.vocalSongNode = null;
-    }
+    this.engine.stopVocalTrack();
   }
 
   /**
@@ -482,7 +476,7 @@ export class OldMacDonaldScene implements StorybookScene {
    */
   public triggerCow(cx: number, cy: number): void {
     if (!this.isActive) return;
-    this.engine.playSound('cow.ogg', { volume: 0.9, pitch: 1.0 });
+    this.engine.playSound('cow.mp3', { volume: 0.9, pitch: 1.0 });
     this.engine.playInstrumentNote('banjo', 'C4', { volume: 0.6 });
     this.bursts.spawnBurst(cx || window.innerWidth * 0.3, cy || window.innerHeight * 0.6, 12, '#06D6A0');
 
@@ -497,7 +491,7 @@ export class OldMacDonaldScene implements StorybookScene {
    */
   public triggerSheep(cx: number, cy: number): void {
     if (!this.isActive) return;
-    this.engine.playSound('sheep.ogg', { volume: 0.85, pitch: 1.05 });
+    this.engine.playSound('sheep.mp3', { volume: 0.85, pitch: 1.05 });
     this.engine.playInstrumentNote('banjo', 'E4', { volume: 0.6 });
     this.bursts.spawnStarGlow(cx || window.innerWidth * 0.7, cy || window.innerHeight * 0.5, 14, '#FFF3B0');
 

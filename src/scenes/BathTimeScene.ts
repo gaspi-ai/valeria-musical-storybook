@@ -66,11 +66,11 @@ export class BathTimeScene implements StorybookScene {
   // State
   private isActive: boolean = false;
   private activeTimeouts: Set<number> = new Set();
-  private vocalAudio: HTMLAudioElement | null = null;
   private isVocalPlaying: boolean = false;
   private isWaterRunning: boolean = false;
   private isPuppyClean: boolean = false;
   private animFrameId: number = 0;
+  private resizeHandler: (() => void) | null = null;
   private waterWaveOffset: number = 0;
   private isUkulelePlaying: boolean = true;
 
@@ -344,7 +344,7 @@ export class BathTimeScene implements StorybookScene {
         const y = window.innerHeight * (0.45 + Math.random() * 0.2);
         this.createFloatingBubble(x, y);
       }
-      this.engine.playSound('bubbles.ogg', { volume: 0.7 });
+      this.engine.playSound('bubbles.mp3', { volume: 0.7 });
     });
 
     this.element.querySelector('#btn-remud-puppy')?.addEventListener('pointerdown', (e) => {
@@ -596,6 +596,7 @@ export class BathTimeScene implements StorybookScene {
    * Undulating water surface animation loop on Canvas.
    */
   private startWaterLoop(): void {
+    cancelAnimationFrame(this.animFrameId);
     const canvas = this.waterCanvas;
     const ctx = this.waterCtx;
 
@@ -609,7 +610,11 @@ export class BathTimeScene implements StorybookScene {
     };
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+    this.resizeHandler = resizeCanvas;
+    window.addEventListener('resize', this.resizeHandler);
 
     let frameCount = 0;
 
@@ -719,6 +724,11 @@ export class BathTimeScene implements StorybookScene {
     this.isWaterRunning = false;
     this.stopVocalSong();
     cancelAnimationFrame(this.animFrameId);
+    this.animFrameId = 0;
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
 
     // Clean up bubbles
     this.bubblesContainer.innerHTML = '';
@@ -733,22 +743,17 @@ export class BathTimeScene implements StorybookScene {
     }
   }
 
-  private startVocalSong(): void {
+  private async startVocalSong(): Promise<void> {
     this.stopVocalSong();
     this.engine.stopUkuleleSwingGroove();
     const btn = this.element.querySelector('#btn-bath-sing') as HTMLElement;
     if (btn) btn.classList.add('active');
-
-    try {
-      this.vocalAudio = new Audio(this.engine.resolveAudioPath('audio/songs/mommy.mp3'));
-      this.vocalAudio.volume = 0.95;
-      this.isVocalPlaying = true;
-      this.vocalAudio.play().catch(e => console.warn('Bath vocal song play warning:', e));
-      this.vocalAudio.onended = () => {
-        this.stopVocalSong();
-      };
-    } catch (e) {
-      console.warn('Could not start vocal song:', e);
+    this.isVocalPlaying = true;
+    const ok = await this.engine.playVocalTrack('songs/mommy.mp3', () => {
+      this.stopVocalSong();
+    });
+    if (!ok) {
+      this.stopVocalSong();
     }
   }
 
@@ -756,13 +761,7 @@ export class BathTimeScene implements StorybookScene {
     this.isVocalPlaying = false;
     const btn = this.element.querySelector('#btn-bath-sing') as HTMLElement;
     if (btn) btn.classList.remove('active');
-    if (this.vocalAudio) {
-      this.vocalAudio.pause();
-      this.vocalAudio.currentTime = 0;
-      this.vocalAudio.removeAttribute('src');
-      this.vocalAudio.load();
-      this.vocalAudio = null;
-    }
+    this.engine.stopVocalTrack();
     if (this.isActive && this.isUkulelePlaying) {
       this.engine.startUkuleleSwingGroove();
     }

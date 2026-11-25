@@ -333,8 +333,8 @@ export class SongsJukebox {
     this.theaterViewEl.style.display = 'block';
     this.element.style.background = song.themeColor;
 
-    // Load Lottie Animation
-    this.loadLottie(song.lottieFile);
+    // Load Lottie Animation (resolved relative to Vite BASE_URL)
+    this.loadLottie(this.player.getLottieUrl(song));
 
     // Build the reactive SVG stage
     this.buildReactiveStage(song);
@@ -638,13 +638,13 @@ export class SongsJukebox {
 
       cow?.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
-        this.engine.playSound('cow.ogg', { volume: 0.9 });
+        this.engine.playSound('cow.mp3', { volume: 0.9 });
         const ev = e as PointerEvent;
         this.spawnBurst(ev.clientX, ev.clientY, 8, 'circle', '#D97706');
       });
       sheep?.addEventListener('pointerdown', (e) => {
         e.stopPropagation();
-        this.engine.playSound('sheep.ogg', { volume: 0.9 });
+        this.engine.playSound('sheep.mp3', { volume: 0.9 });
         const ev = e as PointerEvent;
         this.spawnBurst(ev.clientX, ev.clientY, 8, 'circle', '#FFF3B0');
       });
