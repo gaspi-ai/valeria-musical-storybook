@@ -52,9 +52,11 @@ export class AudioEngine {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
 
-  // Active Voice Polyphony Stealing (Cap at 8 voices max)
+  // Active Voice Polyphony Stealing (Cap at 8 voices max) & per-SFX debounce
   private activeVoices: ActiveVoice[] = [];
   private readonly MAX_POLYPHONY = 8;
+  private lastSfxTime: Map<string, number> = new Map();
+  private duckTimeout: number | null = null;
 
   // AudioBuffer cache memory pool (LRU capped for mobile Safari RAM safety)
   private bufferCache: Map<string, AudioBuffer> = new Map();
@@ -417,6 +419,15 @@ export class AudioEngine {
     if (!this.ctx || this.ctx.state !== 'running') return null;
 
     const url = this.resolveAudioPath(urlOrName);
+
+    // Gentle 90ms per-sound debounce (skipped for scheduled notes) to prevent harsh toddler slap-stacking
+    if (options.time === undefined && !options.loop) {
+      const nowMs = performance.now();
+      const prev = this.lastSfxTime.get(url) || 0;
+      if (nowMs - prev < 90) return null;
+      this.lastSfxTime.set(url, nowMs);
+    }
+
     const buffer = this.bufferCache.get(url);
 
     if (!buffer) {
@@ -1311,12 +1322,34 @@ export class AudioEngine {
   }
 
   /**
-   * Unified streaming vocal song player routed through musicGain -> Compressor -> MasterGain.
-   * Guarantees Master Volume controls all scene vocal songs and stopAllAudio() silences them.
+   * Smoothly ducks background music when an interactive sound or voice plays,
+   * eliminating clashing noise and keeping every toy sound crystal clear.
    */
-  public async playVocalTrack(audioPath: string, onEnded?: () => void): Promise<boolean> {
+  public duckMusic(durationMs: number = 1100): void {
+    if (!this.ctx || !this.musicGain) return;
+    const now = this.ctx.currentTime;
+    this.musicGain.gain.cancelScheduledValues(now);
+    this.musicGain.gain.setTargetAtTime(0.26, now, 0.04);
+
+    if (this.duckTimeout !== null) {
+      clearTimeout(this.duckTimeout);
+    }
+    this.duckTimeout = window.setTimeout(() => {
+      this.duckTimeout = null;
+      if (this.ctx && this.musicGain) {
+        this.musicGain.gain.setTargetAtTime(0.75, this.ctx.currentTime, 0.18);
+      }
+    }, durationMs);
+  }
+
+  /**
+   * Unified streaming vocal/theme song player routed through musicGain -> Compressor -> MasterGain.
+   * Guarantees only ONE song ever plays at a time and Master Volume controls everything.
+   */
+  public async playVocalTrack(audioPath: string, onEnded?: () => void, loop: boolean = true): Promise<boolean> {
     if (!this.ctx) await this.unlock();
     this.stopVocalTrack();
+    this.pauseSongTrack();
 
     if (typeof window === 'undefined') return false;
 
@@ -1325,10 +1358,12 @@ export class AudioEngine {
       this.vocalAudioEl.crossOrigin = 'anonymous';
       this.vocalAudioEl.preload = 'auto';
       this.vocalAudioEl.addEventListener('ended', () => {
-        this.isVocalTrackPlaying = false;
-        const cb = this.vocalEndedCallback;
-        this.vocalEndedCallback = null;
-        if (cb) cb();
+        if (!this.vocalAudioEl?.loop) {
+          this.isVocalTrackPlaying = false;
+          const cb = this.vocalEndedCallback;
+          this.vocalEndedCallback = null;
+          if (cb) cb();
+        }
       });
     }
 
@@ -1336,7 +1371,7 @@ export class AudioEngine {
       try {
         this.vocalMediaSource = this.ctx.createMediaElementSource(this.vocalAudioEl);
         this.vocalGainNode = this.ctx.createGain();
-        this.vocalGainNode.gain.setValueAtTime(0.95, this.ctx.currentTime);
+        this.vocalGainNode.gain.setValueAtTime(0.92, this.ctx.currentTime);
         this.vocalMediaSource.connect(this.vocalGainNode);
         this.vocalGainNode.connect(this.musicGain);
       } catch {
@@ -1346,6 +1381,7 @@ export class AudioEngine {
 
     this.vocalEndedCallback = onEnded || null;
     try {
+      this.vocalAudioEl.loop = loop;
       this.vocalAudioEl.src = this.resolveAudioPath(audioPath);
       this.vocalAudioEl.currentTime = 0;
       await this.vocalAudioEl.play();

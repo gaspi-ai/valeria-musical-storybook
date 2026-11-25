@@ -177,15 +177,11 @@ export class ParentGate {
 
           <!-- Scene Selector Carousel / Grid -->
           <div class="parent-section">
-            <label class="parent-label">Choose Storybook Scene (9 Scenes):</label>
+            <label class="parent-label">Choose Musical Game (6 Rebuilt Games):</label>
             <div class="parent-btn-group scene-grid-6">
               <button class="scene-select-btn ${this.currentScene === 'wheels' ? 'active' : ''}" data-scene="wheels">
                 <span class="scene-btn-icon">🚌</span>
                 <span class="scene-btn-title">Wheels on the Bus</span>
-              </button>
-              <button class="scene-select-btn ${this.currentScene === 'musical_me' ? 'active' : ''}" data-scene="musical_me">
-                <span class="scene-btn-icon">🌸</span>
-                <span class="scene-btn-title">Musical Me Garden</span>
               </button>
               <button class="scene-select-btn ${this.currentScene === 'old_macdonald' ? 'active' : ''}" data-scene="old_macdonald">
                 <span class="scene-btn-icon">🚜</span>
@@ -197,23 +193,15 @@ export class ParentGate {
               </button>
               <button class="scene-select-btn ${this.currentScene === 'twinkle_star' ? 'active' : ''}" data-scene="twinkle_star">
                 <span class="scene-btn-icon">⭐</span>
-                <span class="scene-btn-title">Twinkle, Twinkle, Little Star</span>
+                <span class="scene-btn-title">Twinkle Little Star</span>
               </button>
               <button class="scene-select-btn ${this.currentScene === 'row_boat' ? 'active' : ''}" data-scene="row_boat">
                 <span class="scene-btn-icon">🛶</span>
-                <span class="scene-btn-title">Row, Row, Row Your Boat</span>
+                <span class="scene-btn-title">Row Your Boat</span>
               </button>
-              <button class="scene-select-btn ${this.currentScene === 'bath_time' ? 'active' : ''}" data-scene="bath_time">
-                <span class="scene-btn-icon">🛁</span>
-                <span class="scene-btn-title">Bath Time Splash</span>
-              </button>
-              <button class="scene-select-btn ${this.currentScene === 'peekaboo_meadow' ? 'active' : ''}" data-scene="peekaboo_meadow">
-                <span class="scene-btn-icon">🌸</span>
-                <span class="scene-btn-title">Peek-a-Boo Meadow</span>
-              </button>
-              <button class="scene-select-btn ${this.currentScene === 'sound_paint' ? 'active' : ''}" data-scene="sound_paint">
-                <span class="scene-btn-icon">🎨</span>
-                <span class="scene-btn-title">Sound Paint Canvas</span>
+              <button class="scene-select-btn ${this.currentScene === 'musical_me' ? 'active' : ''}" data-scene="musical_me">
+                <span class="scene-btn-icon">🎹</span>
+                <span class="scene-btn-title">Rainbow Xylophone</span>
               </button>
             </div>
           </div>

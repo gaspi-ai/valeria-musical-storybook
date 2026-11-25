@@ -1,0 +1,443 @@
+/* ==========================================================================
+   Rebuilt Professional Musical Games Suite (src/games/)
+   iPhone-first (100dvh, safe-area aware), crisp custom SVGs, zero-clash UI
+   ========================================================================== */
+
+.pro-game-scene {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding-top: calc(68px + var(--safe-top));
+  padding-bottom: calc(14px + var(--safe-bottom));
+  padding-left: calc(12px + var(--safe-left));
+  padding-right: calc(12px + var(--safe-right));
+  font-family: var(--font-storybook);
+}
+
+.pro-game-stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 0;
+}
+
+/* Bottom Clean Single-Song Control Pill */
+.pro-game-music-bar {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  z-index: 20;
+}
+
+.pro-music-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 3px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1D3557;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 22px rgba(29, 53, 87, 0.18);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.pro-music-toggle-btn.playing {
+  background: linear-gradient(135deg, #4361EE 0%, #7209B7 100%);
+  color: #FFFFFF;
+}
+
+.pro-music-toggle-btn:active {
+  transform: scale(0.94);
+}
+
+/* ==========================================================================
+   GAME 1: WHEELS ON THE BUS
+   ========================================================================== */
+.game-wheels {
+  background: linear-gradient(180deg, #64D2FF 0%, #BDE0FE 58%, #74C69D 58%, #52B788 80%, #4A5568 80%, #2D3748 100%);
+}
+
+.pro-bus-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 12px;
+  pointer-events: none;
+}
+
+.pro-sky-sun {
+  width: 76px;
+  height: 76px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.pro-bus-wrap {
+  width: min(94vw, 520px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.pro-bus-svg {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 14px 20px rgba(29, 53, 87, 0.24));
+  transform-origin: bottom center;
+}
+
+.pro-bus-wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  cursor: pointer;
+}
+
+.pro-bus-wheel.spinning {
+  animation: wheelSpin 0.8s linear infinite;
+}
+
+@keyframes wheelSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pro-bus-wiper {
+  transform-box: fill-box;
+  transform-origin: bottom left;
+  cursor: pointer;
+}
+
+.pro-bus-wiper.swishing {
+  animation: wiperSwish 0.45s ease-in-out 2;
+}
+
+@keyframes wiperSwish {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-42deg); }
+}
+
+.pro-bus-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.pro-toy-pill {
+  border: 3px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1D3557;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.9rem;
+  padding: 11px 16px;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(29, 53, 87, 0.16);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pro-toy-pill:active {
+  transform: scale(0.92);
+}
+
+/* ==========================================================================
+   GAME 2: OLD MACDONALD'S FARM
+   ========================================================================== */
+.game-old_macdonald {
+  background: linear-gradient(180deg, #90E0EF 0%, #CAF0F8 42%, #74C69D 42%, #40916C 100%);
+}
+
+.pro-farm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+}
+
+@media (min-width: 600px) {
+  .pro-farm-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.pro-farm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border: 4px solid var(--card-accent);
+  border-radius: 26px;
+  padding: 12px 10px;
+  box-shadow: 0 10px 22px rgba(29, 53, 87, 0.14);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pro-farm-art {
+  width: min(104px, 24vw);
+  height: min(104px, 24vw);
+}
+
+.pro-farm-name {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #1D3557;
+  margin-top: 4px;
+}
+
+.pro-farm-sound {
+  margin-top: 3px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--card-accent);
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+/* ==========================================================================
+   GAME 3: ITSY BITSY SPIDER
+   ========================================================================== */
+.game-itsy_bitsy {
+  background: linear-gradient(180deg, #8ECAE6 0%, #E0FBFC 45%, #F4A261 45%, #E76F51 82%, #52B788 82%, #2D6A4F 100%);
+  transition: filter 0.4s ease;
+}
+
+.game-itsy_bitsy.raining {
+  background: linear-gradient(180deg, #4A5568 0%, #718096 45%, #D97757 45%, #B85D3B 82%, #40916C 82%, #1B4332 100%);
+}
+
+.pro-spider-sky {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 8px;
+}
+
+.pro-weather-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 4px solid #FFFFFF;
+  border-radius: 24px;
+  padding: 10px 18px;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.85rem;
+  color: #1D3557;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+}
+
+.pro-weather-btn span:first-child {
+  font-size: 2.3rem;
+  line-height: 1;
+}
+
+.pro-spout-track {
+  position: relative;
+  width: 96px;
+  height: min(46dvh, 330px);
+  background: linear-gradient(90deg, #B5651D 0%, #E09F3E 45%, #8D5524 100%);
+  border: 5px solid #5C3A21;
+  border-radius: 24px;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.2), 0 10px 24px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.pro-spider-actor {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  width: 82px;
+  height: 82px;
+  transition: bottom 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   GAME 4: TWINKLE, TWINKLE, LITTLE STAR
+   ========================================================================== */
+.game-twinkle_star {
+  background: radial-gradient(circle at 50% 25%, #2B2D6E 0%, #141236 75%, #0B0826 100%);
+}
+
+.pro-night-sky {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+}
+
+.pro-moon-btn {
+  position: absolute;
+  top: 6%;
+  right: 8%;
+  width: 96px;
+  height: 96px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.pro-star-btn {
+  position: absolute;
+  background: transparent;
+  border: none;
+  width: 68px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 12px rgba(255, 224, 102, 0.7));
+  transition: transform 0.16s ease;
+}
+
+.pro-star-btn:active {
+  transform: translate(-50%, -50%) scale(1.25);
+}
+
+/* ==========================================================================
+   GAME 5: ROW, ROW, ROW YOUR BOAT
+   ========================================================================== */
+.game-row_boat {
+  background: linear-gradient(180deg, #90E0EF 0%, #CAF0F8 36%, #00B4D8 36%, #0077B6 100%);
+}
+
+.pro-river-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.pro-boat-btn {
+  background: transparent;
+  border: none;
+  width: min(86vw, 340px);
+  cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 14px 20px rgba(3, 4, 94, 0.25));
+}
+
+.pro-river-toys {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   GAME 6: RAINBOW XYLOPHONE (FRÈRE JACQUES)
+   ========================================================================== */
+.game-musical_me {
+  background: linear-gradient(160deg, #FFF5F5 0%, #FEF9C3 50%, #DCFCE7 100%);
+}
+
+.pro-xylo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pro-inst-pill {
+  border: 3px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.86);
+  color: #1D3557;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.82rem;
+  padding: 8px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.pro-inst-pill.active {
+  background: #4361EE;
+  color: #FFFFFF;
+}
+
+.pro-xylo-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+  height: min(46dvh, 320px);
+  padding: 0 4px;
+}
+
+.pro-xylo-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 4px;
+  border-radius: 22px;
+  border: 4px solid #FFFFFF;
+  background: var(--bar-color);
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.92rem;
+  box-shadow: 0 10px 20px rgba(29, 53, 87, 0.16);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.pro-xylo-bar.glow-guide {
+  box-shadow: 0 0 0 6px #FFD166, 0 0 28px #FF9F1C;
+  transform: translateY(-10px) scale(1.04);
+}
+
+.pro-xylo-bar:active {
+  transform: scale(0.93);
+}
+
+.xylo-screw {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+}

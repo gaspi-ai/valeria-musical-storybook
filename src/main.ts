@@ -8,20 +8,18 @@
 import './style.css';
 import { AudioEngine } from './audio/AudioEngine';
 import type { InstrumentType } from './audio/AudioEngine';
-import { AcousticEnsemble } from './audio/AcousticEnsemble';
 import { TouchBurstManager } from './components/TouchBurstManager';
 import { ParentGate } from './components/ParentGate';
 import { IntroScreen } from './components/IntroScreen';
 import { SceneManager } from './scenes/SceneManager';
-import { WheelsScene } from './scenes/WheelsScene';
-import { MusicalMeScene } from './scenes/MusicalMeScene';
-import { OldMacDonaldScene } from './scenes/OldMacDonaldScene';
-import { ItsyBitsySpiderScene } from './scenes/ItsyBitsySpiderScene';
-import { TwinkleLittleStarScene } from './scenes/TwinkleLittleStarScene';
-import { RowYourBoatScene } from './scenes/RowYourBoatScene';
-import { BathTimeScene } from './scenes/BathTimeScene';
-import { PeekabooMeadowScene } from './scenes/PeekabooMeadowScene';
-import { SoundPaintScene } from './scenes/SoundPaintScene';
+import {
+  WheelsBusGame,
+  OldMacDonaldGame,
+  ItsyBitsyGame,
+  TwinkleStarGame,
+  RowBoatGame,
+  RainbowXylophoneGame,
+} from './games/GameScenes';
 import { SongsJukebox } from './components/SongsJukebox';
 import { LearningStudio } from './components/LearningStudio';
 import { StorybookShelf } from './components/StorybookShelf';
@@ -32,18 +30,14 @@ class ToddlerStorybookApp {
   private appRoot: HTMLElement;
   private bursts: TouchBurstManager;
   private engine: AudioEngine;
-  private ensemble: AcousticEnsemble;
   private sceneManager: SceneManager;
 
-  private wheelsScene: WheelsScene;
-  private musicalMeScene: MusicalMeScene;
-  private oldMacDonaldScene: OldMacDonaldScene;
-  private itsyBitsyScene: ItsyBitsySpiderScene;
-  private twinkleStarScene: TwinkleLittleStarScene;
-  private rowBoatScene: RowYourBoatScene;
-  private bathTimeScene: BathTimeScene;
-  private peekabooMeadowScene: PeekabooMeadowScene;
-  private soundPaintScene: SoundPaintScene;
+  private wheelsScene: WheelsBusGame;
+  private musicalMeScene: RainbowXylophoneGame;
+  private oldMacDonaldScene: OldMacDonaldGame;
+  private itsyBitsyScene: ItsyBitsyGame;
+  private twinkleStarScene: TwinkleStarGame;
+  private rowBoatScene: RowBoatGame;
 
   private songsJukebox: SongsJukebox;
   private learningStudio: LearningStudio;
@@ -57,7 +51,6 @@ class ToddlerStorybookApp {
   constructor() {
     this.appRoot = document.getElementById('app') as HTMLElement;
     this.engine = AudioEngine.getInstance();
-    this.ensemble = new AcousticEnsemble(this.engine);
     this.sceneManager = SceneManager.getInstance();
 
     // 1. High-Performance Multi-Touch Burst Particle Canvas
@@ -66,27 +59,21 @@ class ToddlerStorybookApp {
     // 2. Hardware Touch Lockout & Global Multi-Touch Slap Handler
     this.setupHardwareLockout();
 
-    // 3. Initialize All 9 Interactive Storybook Scenes
-    this.wheelsScene = new WheelsScene(this.appRoot, this.bursts, this.ensemble);
-    this.musicalMeScene = new MusicalMeScene(this.appRoot, this.bursts);
-    this.oldMacDonaldScene = new OldMacDonaldScene(this.appRoot, this.bursts);
-    this.itsyBitsyScene = new ItsyBitsySpiderScene(this.appRoot, this.bursts);
-    this.twinkleStarScene = new TwinkleLittleStarScene(this.appRoot, this.bursts);
-    this.rowBoatScene = new RowYourBoatScene(this.appRoot, this.bursts);
-    this.bathTimeScene = new BathTimeScene(this.appRoot, this.bursts);
-    this.peekabooMeadowScene = new PeekabooMeadowScene(this.appRoot, this.bursts);
-    this.soundPaintScene = new SoundPaintScene(this.appRoot, this.bursts);
+    // 3. Initialize All 6 Rebuilt Flagship Musical Games (Studio Audio Discipline: Zero Noisy Loops!)
+    this.wheelsScene = new WheelsBusGame(this.appRoot, this.bursts);
+    this.oldMacDonaldScene = new OldMacDonaldGame(this.appRoot, this.bursts);
+    this.itsyBitsyScene = new ItsyBitsyGame(this.appRoot, this.bursts);
+    this.twinkleStarScene = new TwinkleStarGame(this.appRoot, this.bursts);
+    this.rowBoatScene = new RowBoatGame(this.appRoot, this.bursts);
+    this.musicalMeScene = new RainbowXylophoneGame(this.appRoot, this.bursts);
 
     // Register with SceneManager
     this.sceneManager.registerScene(this.wheelsScene);
-    this.sceneManager.registerScene(this.musicalMeScene);
     this.sceneManager.registerScene(this.oldMacDonaldScene);
     this.sceneManager.registerScene(this.itsyBitsyScene);
     this.sceneManager.registerScene(this.twinkleStarScene);
     this.sceneManager.registerScene(this.rowBoatScene);
-    this.sceneManager.registerScene(this.bathTimeScene);
-    this.sceneManager.registerScene(this.peekabooMeadowScene);
-    this.sceneManager.registerScene(this.soundPaintScene);
+    this.sceneManager.registerScene(this.musicalMeScene);
 
     // 4. Dedicated Songs Jukebox & Little Learner Studio (EN / FR)
     this.songsJukebox = new SongsJukebox(this.appRoot, () => {
@@ -111,15 +98,11 @@ class ToddlerStorybookApp {
         this.songsJukebox.closeJukebox();
         this.learningStudio.closeStudio();
         this.storybookShelf.close();
-        this.ensemble.stop();
         this.sceneManager.deactivateActiveScene();
         this.engine.stopAllAudio();
       },
       onWakeUp: () => {
         this.sceneManager.activateActiveScene();
-        if (this.sceneManager.getActiveSceneId() === 'wheels') {
-          this.setAudioMode(appPrefs.get().audioMode);
-        }
       }
     });
 
@@ -165,12 +148,9 @@ class ToddlerStorybookApp {
   private async startApp(): Promise<void> {
     const prefs = appPrefs.get();
     this.engine.setMasterVolume(prefs.masterVolume);
-    await this.sceneManager.switchScene(prefs.lastScene || 'wheels');
-
-    // Apply persisted audio mode for initial scene
-    if (this.sceneManager.getActiveSceneId() === 'wheels') {
-      this.setAudioMode(prefs.audioMode);
-    }
+    const validIds = new Set(this.sceneManager.getScenes().map(s => s.id));
+    const initialScene = validIds.has(prefs.lastScene) ? prefs.lastScene : 'wheels';
+    await this.sceneManager.switchScene(initialScene);
 
     // Restore infant lock state if previously active
     if (prefs.infantLock) {
@@ -198,32 +178,22 @@ class ToddlerStorybookApp {
   }
 
   /**
-   * Seamlessly switches between any of the 9 scenes.
+   * Seamlessly switches between any of the 6 rebuilt musical games.
    */
   public async switchScene(sceneId: string): Promise<void> {
-    this.ensemble.stop();
     this.engine.stopAllAudio();
     await this.sceneManager.switchScene(sceneId);
-    if (sceneId === 'wheels') {
-      this.ensemble.start();
-    }
   }
 
   /**
-   * Changes Audio Mode between Studio Song, Live Band, and Free Play.
+   * Changes Audio Mode between Studio Song (music on) and Free Play (music off).
    */
   public setAudioMode(mode: 'song' | 'ensemble' | 'free'): void {
-    if (mode === 'song') {
-      this.ensemble.stop();
-      this.engine.playSongTrack();
-    } else if (mode === 'ensemble') {
+    if (mode === 'free') {
+      this.engine.stopVocalTrack();
       this.engine.pauseSongTrack();
-      if (this.sceneManager.getActiveSceneId() === 'wheels') {
-        this.ensemble.start();
-      }
     } else {
-      this.engine.pauseSongTrack();
-      this.ensemble.stop();
+      this.sceneManager.activateActiveScene();
     }
   }
 
@@ -291,7 +261,6 @@ class ToddlerStorybookApp {
   public openJukebox(): void {
     this.learningStudio.closeStudio();
     this.storybookShelf.close();
-    this.ensemble.stop();
     this.sceneManager.deactivateActiveScene();
     this.engine.stopAllAudio();
     this.floatingJukeboxBtn.style.display = 'none';
@@ -300,9 +269,6 @@ class ToddlerStorybookApp {
     this.songsJukebox.openJukebox();
   }
 
-  /**
-   * Called when returning from Jukebox to Storybook.
-   */
   private handleExitJukebox(): void {
     const showFloating = appPrefs.get().infantLock ? 'none' : 'flex';
     this.floatingJukeboxBtn.style.display = showFloating;
@@ -310,19 +276,11 @@ class ToddlerStorybookApp {
     this.floatingShelfBtn.style.display = showFloating;
     this.engine.stopAllAudio();
     this.sceneManager.activateActiveScene();
-    const activeId = this.sceneManager.getActiveSceneId();
-    if (activeId === 'wheels') {
-      this.setAudioMode(appPrefs.get().audioMode);
-    }
   }
 
-  /**
-   * Opens the 1-Year-Old Bilingual Learning Studio.
-   */
   public openLearningStudio(): void {
     this.songsJukebox.closeJukebox();
     this.storybookShelf.close();
-    this.ensemble.stop();
     this.sceneManager.deactivateActiveScene();
     this.engine.stopAllAudio();
     this.floatingJukeboxBtn.style.display = 'none';
@@ -331,9 +289,6 @@ class ToddlerStorybookApp {
     this.learningStudio.openStudio();
   }
 
-  /**
-   * Called when returning from Learning Studio to Storybook.
-   */
   private handleExitLearningStudio(): void {
     const showFloating = appPrefs.get().infantLock ? 'none' : 'flex';
     this.floatingJukeboxBtn.style.display = showFloating;
@@ -341,10 +296,6 @@ class ToddlerStorybookApp {
     this.floatingShelfBtn.style.display = showFloating;
     this.engine.stopAllAudio();
     this.sceneManager.activateActiveScene();
-    const activeId = this.sceneManager.getActiveSceneId();
-    if (activeId === 'wheels') {
-      this.setAudioMode(appPrefs.get().audioMode);
-    }
   }
 
   /**
