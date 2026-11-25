@@ -1420,16 +1420,24 @@ export class AudioEngine {
   }
 
   /**
-   * Master Volume Control (0.0 to 1.0)
+   * Master Volume Control (0.0 to 1.0) — automatically softened in Calm/Bedtime Mode.
    */
   public setMasterVolume(vol: number): void {
     if (this.masterGain && this.ctx) {
-      const v = Math.max(0, Math.min(1, vol));
-      this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05);
+      const clamped = Math.max(0, Math.min(1, vol));
+      const effective = appPrefs.get().bedtimeMode ? clamped * 0.55 : clamped;
+      this.masterGain.gain.setTargetAtTime(effective, this.ctx.currentTime, 0.05);
+    }
+  }
+
+  public setBedtimeMode(enabled: boolean): void {
+    this.setMasterVolume(appPrefs.get().masterVolume);
+    if (enabled && this.isScheduling) {
+      this.setTempo(68);
     }
   }
 
   public getMasterVolume(): number {
-    return this.masterGain ? this.masterGain.gain.value : 0.85;
+    return this.masterGain ? this.masterGain.gain.value : appPrefs.get().masterVolume;
   }
 }

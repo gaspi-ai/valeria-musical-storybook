@@ -473,9 +473,11 @@ export class LearningStudio {
         if (this.firstWordsMode === 'find') {
           if (word.id === this.firstWordsTargetId) {
             this.stageBannerEl.textContent = `🌟 ${t(UI_STRINGS.yay, this.lang)}`;
-            this.speech.speak(`${t(word.label, this.lang)}! ${t(UI_STRINGS.yay, this.lang)}`);
+            this.speech.speakForKey('great_job', `${t(word.label, this.lang)}! ${t(UI_STRINGS.yay, this.lang)}`);
             this.engine.playSound('fanfare.mp3', { volume: 0.65 });
-            confetti({ particleCount: 40, spread: 65, origin: { y: 0.65 } });
+            if (!appPrefs.get().bedtimeMode) {
+              confetti({ particleCount: 40, spread: 65, origin: { y: 0.65 } });
+            }
             this.safeTimeout(() => {
               this.firstWordsPairIdx = (this.firstWordsPairIdx + 1) % Math.ceil(FIRST_WORDS.length / 2);
               this.renderFirstWordsLesson();
@@ -490,7 +492,7 @@ export class LearningStudio {
           }
         } else {
           this.stageBannerEl.textContent = `✨ ${t(word.label, this.lang)}!`;
-          this.speech.speak(t(word.spoken, this.lang));
+          this.speech.speakForKey(word.id, t(word.spoken, this.lang));
         }
       });
     });
@@ -535,9 +537,9 @@ export class LearningStudio {
 
         // 1. Play real acoustic animal sound immediately
         this.engine.playSound(animal.sfx, { volume: 0.9 });
-        // 2. Follow with warm spoken naming for imitation
+        // 2. Follow with warm spoken naming (or Mom/Dad's recorded voice!) for imitation
         this.safeTimeout(() => {
-          this.speech.speak(t(animal.spoken, this.lang));
+          this.speech.speakForKey(animal.id, t(animal.spoken, this.lang));
         }, 550);
       });
     });
@@ -622,7 +624,7 @@ export class LearningStudio {
       this.stageBannerEl.textContent = `🐻 ${t(part.label, this.lang)}!`;
       this.engine.playSound(part.sfx, { volume: 0.85 });
       this.bursts.spawnBurst(x, y, 14, part.color);
-      this.speech.speak(t(part.spoken, this.lang));
+      this.speech.speakForKey(partId, t(part.spoken, this.lang));
       this.speech.recordInteraction('body_parts', t(part.label, this.lang));
     };
 
@@ -713,7 +715,9 @@ export class LearningStudio {
 
         if (count >= 5) {
           this.engine.playSound('fanfare.mp3', { volume: 0.7 });
-          confetti({ particleCount: 55, spread: 75, origin: { y: 0.6 } });
+          if (!appPrefs.get().bedtimeMode) {
+            confetti({ particleCount: 55, spread: 75, origin: { y: 0.6 } });
+          }
           this.safeTimeout(() => {
             this.countingCurrent = 0;
             this.countingThemeIdx = (this.countingThemeIdx + 1) % COUNTING_THEMES.length;

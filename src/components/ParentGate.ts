@@ -11,6 +11,9 @@
 import { AudioEngine } from '../audio/AudioEngine';
 import type { InstrumentType } from '../audio/AudioEngine';
 import { appPrefs, type AppLanguage } from '../state/AppPreferences';
+import { ParentVoiceStore, PARENT_VOICE_SLOTS } from '../learning/ParentVoiceStore';
+import { SpeechHelper } from '../learning/SpeechHelper';
+import { LESSONS_META } from '../learning/curriculum';
 
 export interface ParentGateCallbacks {
   onSceneChange: (scene: string) => void;
@@ -18,6 +21,8 @@ export interface ParentGateCallbacks {
   onInstrumentChange: (inst: InstrumentType) => void;
   onLanguageChange?: (lang: AppLanguage) => void;
   onInfantLockChange?: (locked: boolean) => void;
+  onBedtimeModeChange?: (enabled: boolean) => void;
+  onSessionTimerChange?: (minutes: number) => void;
   onOpenJukebox?: () => void;
   onOpenLearning?: () => void;
 }
@@ -281,6 +286,50 @@ export class ParentGate {
               <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="${appPrefs.get().masterVolume}" />
               <span>🔊</span>
             </div>
+          </div>
+
+          <!-- Calm / Bedtime Mode & Gentle Sleepy Timer -->
+          <div class="parent-section parent-superpower-card">
+            <div class="superpower-row">
+              <div>
+                <h3 class="superpower-title">🌙 Calm / Bedtime Mode</h3>
+                <p class="superpower-desc">Warm night dim, softer sound, 68 BPM lullaby pace, no flashy confetti.</p>
+              </div>
+              <button class="bedtime-toggle-btn ${appPrefs.get().bedtimeMode ? 'active' : ''}" id="btn-toggle-bedtime">
+                ${appPrefs.get().bedtimeMode ? '🌙 ON' : '☀️ OFF'}
+              </button>
+            </div>
+
+            <div class="superpower-divider"></div>
+
+            <div>
+              <div class="superpower-timer-header">
+                <h3 class="superpower-title">⏰ Gentle "Sleepy Bye-Bye" Timer</h3>
+                <span class="timer-status-badge" id="timer-status-badge">Off</span>
+              </div>
+              <div class="parent-btn-group timer-btn-group">
+                <button class="timer-select-btn active" data-mins="0">Off</button>
+                <button class="timer-select-btn" data-mins="5">5 min</button>
+                <button class="timer-select-btn" data-mins="10">10 min</button>
+                <button class="timer-select-btn" data-mins="15">15 min</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parent Voice Recorder Studio (Local & Private) -->
+          <div class="parent-section parent-voice-card">
+            <h3 class="superpower-title">🎙️ Parent Voice Studio (Mom & Dad)</h3>
+            <p class="superpower-desc">Record 3-second clips in your own voice! Valeria hears your voice in Learning Studio (100% private on this device).</p>
+            <div class="voice-slots-list" id="parent-voice-slots"></div>
+          </div>
+
+          <!-- Learning Insights Dashboard -->
+          <div class="parent-section parent-insights-card">
+            <div class="superpower-timer-header">
+              <h3 class="superpower-title">📊 Valeria's Learning Insights</h3>
+              <button class="insights-reset-btn" id="btn-reset-insights">Reset</button>
+            </div>
+            <div id="parent-insights-body"></div>
           </div>
 
           <!-- Fullscreen Action -->
@@ -561,6 +610,139 @@ export class ParentGate {
     fsBtn.addEventListener('click', () => {
       this.toggleFullscreen();
     });
+
+    // Calm / Bedtime Mode Toggle
+    const bedtimeBtn = this.modalOverlay.querySelector('#btn-toggle-bedtime') as HTMLElement;
+    bedtimeBtn?.addEventListener('click', () => {
+      const next = !appPrefs.get().bedtimeMode;
+      appPrefs.update({ bedtimeMode: next });
+      bedtimeBtn.classList.toggle('active', next);
+      bedtimeBtn.textContent = next ? '🌙 ON' : '☀️ OFF';
+      this.callbacks.onBedtimeModeChange?.(next);
+      this.showToast(next ? '🌙 Calm Bedtime Mode Active' : '☀️ Daytime Play Mode Active');
+    });
+
+    // Gentle Sleepy Timer buttons
+    const timerBtns = this.modalOverlay.querySelectorAll('.timer-select-btn');
+    timerBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        timerBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mins = parseInt(btn.getAttribute('data-mins') || '0', 10);
+        this.callbacks.onSessionTimerChange?.(mins);
+        this.showToast(mins > 0 ? `⏰ Sleepy Bye-Bye Timer set for ${mins} min` : '⏰ Sleepy Timer turned off');
+      });
+    });
+
+    // Reset Learning Insights
+    const resetInsightsBtn = this.modalOverlay.querySelector('#btn-reset-insights') as HTMLElement;
+    resetInsightsBtn?.addEventListener('click', () => {
+      SpeechHelper.getInstance().resetStats();
+      this.renderLearningInsights();
+      this.showToast('📊 Learning Insights cleared');
+    });
+  }
+
+  public updateTimerBadge(remainingSec: number | null): void {
+    const badge = this.modalOverlay.querySelector('#timer-status-badge');
+    if (!badge) return;
+    if (remainingSec === null || remainingSec <= 0) {
+      badge.textContent = 'Off';
+      return;
+    }
+    const m = Math.floor(remainingSec / 60);
+    const s = remainingSec % 60;
+    badge.textContent = `${m}:${s.toString().padStart(2, '0')} left`;
+  }
+
+  private async renderParentVoiceSlots(): Promise<void> {
+    const container = this.modalOverlay.querySelector('#parent-voice-slots') as HTMLElement;
+    if (!container) return;
+    const store = ParentVoiceStore.getInstance();
+    await store.refreshRecordedKeys();
+
+    if (!store.isRecordingSupported()) {
+      container.innerHTML = `<p class="superpower-desc">Microphone recording requires HTTPS (e.g. GitHub Pages) on iPhone Safari.</p>`;
+      return;
+    }
+
+    container.innerHTML = PARENT_VOICE_SLOTS.map(slot => {
+      const has = store.hasClip(slot.key);
+      return `
+        <div class="voice-slot-row" data-slot-key="${slot.key}">
+          <span class="voice-slot-label">${slot.emoji} ${slot.labelEn} / ${slot.labelFr}</span>
+          <div class="voice-slot-actions">
+            <button class="voice-btn voice-rec-btn" data-action="record" data-key="${slot.key}">
+              ${has ? '🎙️ Re-rec' : '🎙️ Rec'}
+            </button>
+            ${has ? `<button class="voice-btn voice-play-btn" data-action="play" data-key="${slot.key}">▶</button>` : ''}
+            ${has ? `<button class="voice-btn voice-del-btn" data-action="delete" data-key="${slot.key}">🗑️</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.voice-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.getAttribute('data-action');
+        const key = btn.getAttribute('data-key');
+        if (!key) return;
+
+        if (action === 'record') {
+          btn.textContent = '🔴 Recording...';
+          btn.classList.add('recording');
+          try {
+            await store.startRecording(key, 3000, () => {
+              this.renderParentVoiceSlots();
+              this.showToast('🎙️ Voice saved! Tap ▶ to preview.');
+            });
+          } catch {
+            this.showToast('⚠️ Please allow microphone access to record.');
+            this.renderParentVoiceSlots();
+          }
+        } else if (action === 'play') {
+          await store.playClip(key);
+        } else if (action === 'delete') {
+          await store.deleteClip(key);
+          this.renderParentVoiceSlots();
+        }
+      });
+    });
+  }
+
+  private renderLearningInsights(): void {
+    const body = this.modalOverlay.querySelector('#parent-insights-body') as HTMLElement;
+    if (!body) return;
+    const stats = SpeechHelper.getInstance().getStats();
+    const lang = appPrefs.get().language;
+
+    if (stats.totalTaps === 0) {
+      body.innerHTML = `<p class="superpower-desc">No learning taps yet — open Little Learner Studio to start tracking Valeria's favorite words!</p>`;
+      return;
+    }
+
+    const maxLessonTaps = Math.max(1, ...LESSONS_META.map(l => stats.byLesson[l.id] || 0));
+    const barsHtml = LESSONS_META.map(l => {
+      const count = stats.byLesson[l.id] || 0;
+      const pct = Math.round((count / maxLessonTaps) * 100);
+      return `
+        <div class="insight-bar-row">
+          <span class="insight-bar-label">${l.icon} ${lang === 'fr' ? l.title.fr : l.title.en}</span>
+          <div class="insight-bar-track"><div class="insight-bar-fill" style="width: ${pct}%; background: ${l.themeColor};"></div></div>
+          <span class="insight-bar-count">${count}</span>
+        </div>
+      `;
+    }).join('');
+
+    const wordsHtml = stats.recentWords.length > 0
+      ? `<div class="insight-words-wrap">${stats.recentWords.map(w => `<span class="insight-word-chip">${w}</span>`).join('')}</div>`
+      : '';
+
+    body.innerHTML = `
+      <div class="insight-total-row">Total Learning Interactions: <strong>${stats.totalTaps}</strong></div>
+      <div class="insight-bars-list">${barsHtml}</div>
+      ${wordsHtml}
+    `;
   }
 
   /**
@@ -674,6 +856,8 @@ export class ParentGate {
   public openModal(): void {
     this.engine.playSound('chime.mp3', { volume: 0.8 });
     this.updateModalLockBtnState();
+    this.renderParentVoiceSlots();
+    this.renderLearningInsights();
     this.modalOverlay.style.display = 'flex';
   }
 

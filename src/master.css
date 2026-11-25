@@ -1,0 +1,538 @@
+/* ==========================================================================
+   Phase 3 & 4 Master-Level Polish:
+   - Calm / Bedtime Low-Stimulation Mode
+   - Visual Storybook Home Shelf & Floating Shelf Pill
+   - Gentle "Sleepy Bye-Bye" Session Timer Overlay
+   - Parent Voice Recorder Studio & Learning Insights Dashboard
+   ========================================================================== */
+
+/* Smooth Scene Page-Turn Fade */
+.scene,
+.storybook-scene {
+  animation: scenePageTurn 0.35s ease-out;
+}
+
+@keyframes scenePageTurn {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   1. CALM / BEDTIME MODE (Sensory-Safe Night Filter)
+   -------------------------------------------------------------------------- */
+body.bedtime-mode #app {
+  filter: brightness(0.74) sepia(0.22) saturate(0.75);
+  transition: filter 0.6s ease;
+}
+
+body.bedtime-mode .intro-floating-note,
+body.bedtime-mode .sun-rays-group,
+body.bedtime-mode .meadow-butterfly {
+  animation-duration: 12s !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. FLOATING STORYBOOK SHELF BUTTON ("📚")
+   -------------------------------------------------------------------------- */
+.floating-shelf-btn {
+  position: fixed;
+  top: calc(14px + var(--safe-top));
+  left: calc(248px + var(--safe-left));
+  z-index: 860;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 3px solid #FFFFFF;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF9F1C 0%, #F77F00 100%);
+  font-size: 1.25rem;
+  box-shadow: 0 6px 18px rgba(247, 127, 0, 0.36);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-shelf-btn:active {
+  transform: scale(0.9);
+}
+
+@media (max-width: 410px) {
+  .floating-learn-btn {
+    left: calc(122px + var(--safe-left));
+    padding: 9px 12px;
+    font-size: 0.82rem;
+  }
+  .floating-shelf-btn {
+    left: calc(218px + var(--safe-left));
+    width: 42px;
+    height: 42px;
+    font-size: 1.1rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. VISUAL STORYBOOK HOME SHELF OVERLAY
+   -------------------------------------------------------------------------- */
+.storybook-shelf-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: calc(12px + var(--safe-top)) 10px calc(10px + var(--safe-bottom)) 10px;
+}
+
+.shelf-sheet {
+  width: 100%;
+  max-width: 680px;
+  max-height: 88dvh;
+  background: linear-gradient(180deg, #FFFDF7 0%, #F1F5F9 100%);
+  border-radius: 30px;
+  padding: 18px 16px 20px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.shelf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.shelf-header h2 {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #1D3557;
+  margin: 0;
+}
+
+.shelf-header p {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748B;
+  margin: 2px 0 0;
+}
+
+.shelf-close-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: #E2E8F0;
+  color: #1D3557;
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.shelf-featured-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.shelf-feature-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 20px;
+  border: 3px solid #FFFFFF;
+  color: #FFFFFF;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14);
+}
+
+.shelf-feature-card.feat-learn {
+  background: linear-gradient(135deg, #06D6A0 0%, #118AB2 100%);
+}
+
+.shelf-feature-card.feat-songs {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+}
+
+.feat-icon {
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.feat-text strong {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.feat-text span {
+  display: block;
+  font-size: 0.72rem;
+  opacity: 0.92;
+  margin-top: 2px;
+}
+
+.shelf-scenes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shelf-scene-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 98px;
+  padding: 10px 6px;
+  border-radius: 20px;
+  border: 3px solid #FFFFFF;
+  background: #FFFFFF;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08), inset 0 -4px 0 var(--scene-tint);
+  cursor: pointer;
+  transition: transform 0.14s ease;
+}
+
+.shelf-scene-card.active {
+  border-color: #4361EE;
+  background: #EEF2FF;
+}
+
+.shelf-scene-card:active {
+  transform: scale(0.94);
+}
+
+.shelf-scene-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.shelf-scene-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #1D3557;
+  text-align: center;
+  line-height: 1.15;
+}
+
+/* --------------------------------------------------------------------------
+   4. GENTLE "SLEEPY BYE-BYE" OVERLAY
+   -------------------------------------------------------------------------- */
+.sleepy-byebye-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: radial-gradient(circle at 50% 35%, #2B2D6E 0%, #141236 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: #FFFFFF;
+  animation: scenePageTurn 0.8s ease-out;
+}
+
+.sleepy-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.s-star {
+  position: absolute;
+  font-size: 2rem;
+  opacity: 0.7;
+  animation: floatNote 4s ease-in-out infinite alternate;
+}
+.s1 { top: 14%; left: 16%; }
+.s2 { top: 18%; right: 18%; animation-delay: 0.8s; }
+.s3 { bottom: 20%; left: 14%; animation-delay: 1.4s; }
+.s4 { bottom: 24%; right: 16%; animation-delay: 2s; }
+
+.sleepy-card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 340px;
+}
+
+.sleepy-bear-svg {
+  width: 210px;
+  height: 210px;
+  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.35));
+}
+
+.sleepy-title {
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: #FFE066;
+  margin: 10px 0 6px;
+}
+
+.sleepy-subtitle {
+  font-size: 1rem;
+  color: #C7D2FE;
+  margin-bottom: 28px;
+}
+
+.sleepy-wake-btn {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #E0E7FF;
+  font-family: var(--font-storybook);
+  font-weight: 800;
+  font-size: 0.88rem;
+  padding: 13px 24px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.wake-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: rgba(255, 209, 102, 0.45);
+  pointer-events: none;
+}
+
+.wake-btn-text {
+  position: relative;
+  z-index: 2;
+}
+
+/* --------------------------------------------------------------------------
+   5. PARENT SUPERPOWER CARDS INSIDE GROWN-UPS MENU
+   -------------------------------------------------------------------------- */
+.parent-superpower-card,
+.parent-voice-card,
+.parent-insights-card {
+  background: #F8FAFC;
+  border: 2px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.superpower-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.superpower-title {
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: #1D3557;
+  margin: 0 0 3px;
+}
+
+.superpower-desc {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.superpower-divider {
+  height: 1px;
+  background: #E2E8F0;
+  margin: 12px 0;
+}
+
+.bedtime-toggle-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.85rem;
+  background: #E2E8F0;
+  color: #1D3557;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bedtime-toggle-btn.active {
+  background: #312E81;
+  color: #FFE066;
+}
+
+.superpower-timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.timer-status-badge {
+  background: #E0E7FF;
+  color: #3730A3;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.timer-btn-group {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* Parent Voice Studio */
+.voice-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.voice-slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.voice-slot-label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1D3557;
+}
+
+.voice-slot-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voice-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-family: var(--font-storybook);
+  font-weight: 800;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.voice-rec-btn {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.voice-rec-btn.recording {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.voice-play-btn {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.voice-del-btn {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+/* Learning Insights Dashboard */
+.insights-reset-btn {
+  border: none;
+  background: #F1F5F9;
+  color: #64748B;
+  font-family: var(--font-storybook);
+  font-weight: 800;
+  font-size: 0.74rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.insight-total-row {
+  font-size: 0.85rem;
+  color: #334155;
+  margin-bottom: 10px;
+}
+
+.insight-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.insight-bar-row {
+  display: grid;
+  grid-template-columns: 125px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+
+.insight-bar-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #1D3557;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.insight-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #E2E8F0;
+  overflow: hidden;
+}
+
+.insight-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 4px;
+}
+
+.insight-bar-count {
+  font-size: 0.76rem;
+  font-weight: 900;
+  color: #475569;
+  text-align: right;
+}
+
+.insight-words-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.insight-word-chip {
+  background: #E0F2FE;
+  color: #0369A1;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+}

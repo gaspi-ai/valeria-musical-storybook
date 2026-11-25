@@ -5,6 +5,7 @@
 
 import { appPrefs, type AppLanguage } from '../state/AppPreferences';
 import type { LessonId } from './curriculum';
+import { ParentVoiceStore } from './ParentVoiceStore';
 
 const STATS_KEY = 'valeria_learning_stats_v1';
 
@@ -86,6 +87,44 @@ export class SpeechHelper {
         window.speechSynthesis.cancel();
       } catch {}
     }
+  }
+
+  /**
+   * Plays a parent's custom recorded voice clip for `key` if one exists in IndexedDB;
+   * otherwise falls back seamlessly to warm bilingual speech synthesis.
+   */
+  public async speakForKey(key: string, fallbackText: string, langOverride?: AppLanguage): Promise<void> {
+    const store = ParentVoiceStore.getInstance();
+    if (store.hasClip(key)) {
+      const played = await store.playClip(key);
+      if (played) return;
+    }
+    this.speak(fallbackText, langOverride);
+  }
+
+  public getStats(): LearningStats {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return { totalTaps: 0, byLesson: {}, recentWords: [] };
+    }
+    try {
+      const raw = window.localStorage.getItem(STATS_KEY);
+      if (!raw) return { totalTaps: 0, byLesson: {}, recentWords: [] };
+      const parsed = JSON.parse(raw) as Partial<LearningStats>;
+      return {
+        totalTaps: parsed.totalTaps || 0,
+        byLesson: parsed.byLesson || {},
+        recentWords: parsed.recentWords || [],
+      };
+    } catch {
+      return { totalTaps: 0, byLesson: {}, recentWords: [] };
+    }
+  }
+
+  public resetStats(): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      window.localStorage.removeItem(STATS_KEY);
+    } catch {}
   }
 
   public recordInteraction(lessonId: LessonId, wordLabel?: string): void {

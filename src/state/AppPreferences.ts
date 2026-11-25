@@ -15,6 +15,7 @@ export interface PreferencesState {
   audioMode: AudioMode;
   instrument: InstrumentType;
   infantLock: boolean;
+  bedtimeMode: boolean;
   lastScene: string;
 }
 
@@ -26,6 +27,7 @@ const DEFAULT_PREFS: PreferencesState = {
   audioMode: 'ensemble',
   instrument: 'marimba',
   infantLock: false,
+  bedtimeMode: false,
   lastScene: 'wheels',
 };
 
@@ -59,6 +61,7 @@ class AppPreferencesStore {
             : DEFAULT_PREFS.audioMode,
         instrument: typeof parsed.instrument === 'string' ? (parsed.instrument as InstrumentType) : DEFAULT_PREFS.instrument,
         infantLock: Boolean(parsed.infantLock),
+        bedtimeMode: Boolean(parsed.bedtimeMode),
         lastScene: typeof parsed.lastScene === 'string' && parsed.lastScene.length > 0 ? parsed.lastScene : DEFAULT_PREFS.lastScene,
       };
     } catch {

@@ -7,6 +7,7 @@
 @import './scenes.css';
 @import './jukebox.css';
 @import './learning.css';
+@import './master.css';
 
 :root {
   --color-bus-yellow: #FFBD00;
