@@ -5,7 +5,7 @@
    ========================================================================== */
 
 @import './scenes.css';
-@import './jukebox.css';
+@import './songs/songs.css';
 @import './learning.css';
 @import './master.css';
 @import './games/games.css';

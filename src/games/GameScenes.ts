@@ -628,3 +628,378 @@ export class RainbowXylophoneGame extends BaseGameScene {
     });
   }
 }
+
+// ============================================================================
+// GAME 7: MAGIC BUBBLE POP (Song: Pop Goes the Weasel)
+// ============================================================================
+export class MagicBubblePopGame extends BaseGameScene {
+  public readonly id = 'bubble_pop';
+  public readonly title = 'Magic Bubble Pop';
+  public readonly subtitle = 'Pop & Discover Surprises';
+  public readonly icon = '🫧';
+  public readonly themeColor = '#4CC9F0';
+  public readonly songFile = 'songs/pop_goes_weasel.mp3';
+  public readonly songLabel = 'Pop Goes the Weasel';
+
+  private spawnTimer: number | null = null;
+  private noteIdx = 0;
+  private readonly scale = ['C5', 'D5', 'E5', 'G5', 'A5', 'C6'];
+  private readonly bubblePalette = [
+    { color: '#FF6B8B', en: 'Pink', fr: 'Rose', icon: '💖' },
+    { color: '#4CC9F0', en: 'Blue', fr: 'Bleu', icon: '🦆' },
+    { color: '#FFD166', en: 'Yellow', fr: 'Jaune', icon: '⭐' },
+    { color: '#52B788', en: 'Green', fr: 'Vert', icon: '🦋' },
+    { color: '#A06CD5', en: 'Purple', fr: 'Violet', icon: '🌸' },
+    { color: '#FF9F1C', en: 'Orange', fr: 'Orange', icon: '🎵' },
+  ];
+
+  constructor(container: HTMLElement, bursts: TouchBurstManager) {
+    super(container, bursts);
+    this.initScene();
+  }
+
+  protected getPreloadAssets(): string[] {
+    return ['bubbles.mp3', ...this.scale.map(n => `glock_${n}.mp3`)];
+  }
+
+  protected renderStageHtml(): string {
+    return `
+      <div class="pro-bubble-sky" id="pro-bubble-sky">
+        <div class="pro-bubble-banner" id="pro-bubble-banner">🫧 POP!</div>
+      </div>
+    `;
+  }
+
+  protected bindStageEvents(): void {
+    const sky = this.stageEl.querySelector('#pro-bubble-sky') as HTMLElement;
+    sky.addEventListener('pointerdown', (e) => {
+      if (e.target === sky) {
+        const pe = e as PointerEvent;
+        this.spawnBubble(pe.clientX, pe.clientY);
+      }
+    });
+  }
+
+  protected onActivate(): void {
+    const sky = this.stageEl.querySelector('#pro-bubble-sky') as HTMLElement;
+    sky.querySelectorAll('.magic-bubble').forEach(b => b.remove());
+    // Spawn initial batch of giant bubbles
+    for (let i = 0; i < 6; i++) {
+      this.safeTimeout(() => this.spawnBubble(), i * 260);
+    }
+    this.spawnTimer = window.setInterval(() => {
+      if (!this.isActive) return;
+      if (sky.querySelectorAll('.magic-bubble').length < 8) {
+        this.spawnBubble();
+      }
+    }, 950);
+  }
+
+  protected onDeactivate(): void {
+    if (this.spawnTimer !== null) {
+      clearInterval(this.spawnTimer);
+      this.spawnTimer = null;
+    }
+    const sky = this.stageEl.querySelector('#pro-bubble-sky');
+    sky?.querySelectorAll('.magic-bubble').forEach(b => b.remove());
+  }
+
+  private spawnBubble(customX?: number, customY?: number): void {
+    if (!this.isActive) return;
+    const sky = this.stageEl.querySelector('#pro-bubble-sky') as HTMLElement;
+    const banner = this.stageEl.querySelector('#pro-bubble-banner') as HTMLElement;
+    const meta = this.bubblePalette[Math.floor(Math.random() * this.bubblePalette.length)];
+    const size = 84 + Math.floor(Math.random() * 34);
+
+    const bubble = document.createElement('button');
+    bubble.className = 'magic-bubble';
+    bubble.style.width = `${size}px`;
+    bubble.style.height = `${size}px`;
+    bubble.style.setProperty('--b-color', meta.color);
+
+    if (customX !== undefined && customY !== undefined) {
+      const rect = sky.getBoundingClientRect();
+      bubble.style.left = `${Math.max(10, Math.min(82, ((customX - rect.left) / rect.width) * 100))}%`;
+      bubble.style.top = `${Math.max(10, Math.min(75, ((customY - rect.top) / rect.height) * 100))}%`;
+    } else {
+      bubble.style.left = `${8 + Math.random() * 74}%`;
+      bubble.style.bottom = `-20px`;
+    }
+
+    bubble.innerHTML = `<span class="bubble-surprise">${meta.icon}</span><span class="bubble-glint"></span>`;
+
+    bubble.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      const pe = e as PointerEvent;
+      const note = this.scale[this.noteIdx++ % this.scale.length];
+      this.playEffect('bubbles.mp3', 0.8);
+      this.engine.playGlockNote(note, { volume: 0.9 });
+      this.bursts.spawnBurst(pe.clientX, pe.clientY, 16, meta.color);
+
+      const colorWord = appPrefs.get().language === 'fr' ? meta.fr : meta.en;
+      if (banner) banner.textContent = `${meta.icon} ${colorWord}!`;
+      this.speech.speak(colorWord);
+
+      bubble.classList.add('popped');
+      this.safeTimeout(() => bubble.remove(), 180);
+    });
+
+    sky.appendChild(bubble);
+    // Auto-cleanup if bubble drifts off top
+    this.safeTimeout(() => {
+      if (bubble.parentNode) bubble.remove();
+    }, 9500);
+  }
+}
+
+// ============================================================================
+// GAME 8: HATCH THE SURPRISE EGGS (Song: Baa, Baa, Black Sheep)
+// ============================================================================
+export class SurpriseEggsGame extends BaseGameScene {
+  public readonly id = 'surprise_eggs';
+  public readonly title = 'Hatch Surprise Eggs';
+  public readonly subtitle = 'Tap, Crack & Hatch!';
+  public readonly icon = '🐣';
+  public readonly themeColor = '#FF9F1C';
+  public readonly songFile = 'songs/baa_baa_black_sheep.mp3';
+  public readonly songLabel = 'Baa Baa Black Sheep';
+
+  private eggTaps: number[] = [0, 0, 0];
+  private eggAnimals = [ANIMAL_FRIENDS[0], ANIMAL_FRIENDS[1], ANIMAL_FRIENDS[3]];
+  private readonly eggColors = [
+    { bg: '#FF6B8B', dot: '#FFF3B0' },
+    { bg: '#4CC9F0', dot: '#FFFFFF' },
+    { bg: '#FFCA3A', dot: '#FF6B6B' },
+  ];
+
+  constructor(container: HTMLElement, bursts: TouchBurstManager) {
+    super(container, bursts);
+    this.initScene();
+  }
+
+  protected getPreloadAssets(): string[] {
+    return ['cow.mp3', 'dog.mp3', 'meow.mp3', 'duck.mp3', 'sheep.mp3', 'monkey.mp3', 'fanfare.mp3', 'marimba_C5.mp3', 'marimba_E5.mp3'];
+  }
+
+  protected renderStageHtml(): string {
+    return `
+      <div class="pro-eggs-banner" id="pro-eggs-banner">🥚 TAP AN EGG!</div>
+      <div class="pro-eggs-row" id="pro-eggs-row"></div>
+    `;
+  }
+
+  protected bindStageEvents(): void {
+    this.resetEggs();
+  }
+
+  protected onActivate(): void {
+    this.resetEggs();
+  }
+
+  private resetEggs(): void {
+    this.eggTaps = [0, 0, 0];
+    const shuffled = [...ANIMAL_FRIENDS].sort(() => Math.random() - 0.5);
+    this.eggAnimals = shuffled.slice(0, 3);
+    this.renderEggs();
+  }
+
+  private renderEggs(): void {
+    const row = this.stageEl.querySelector('#pro-eggs-row') as HTMLElement;
+    const banner = this.stageEl.querySelector('#pro-eggs-banner') as HTMLElement;
+    const lang = appPrefs.get().language;
+
+    row.innerHTML = [0, 1, 2].map(idx => {
+      const taps = this.eggTaps[idx];
+      const animal = this.eggAnimals[idx];
+      const col = this.eggColors[idx];
+
+      if (taps >= 3) {
+        return `
+          <button class="pro-egg-slot hatched pop-bounce" data-idx="${idx}">
+            <div class="hatched-animal-art">${getAnimalSvg(animal.id)}</div>
+            <span class="hatched-animal-label">${t(animal.label, lang)}!</span>
+          </button>
+        `;
+      }
+
+      return `
+        <button class="pro-egg-slot stage-${taps}" data-idx="${idx}" aria-label="Surprise Egg ${idx + 1}">
+          <svg viewBox="0 0 140 170" class="egg-svg">
+            <ellipse cx="70" cy="96" rx="54" ry="66" fill="${col.bg}" stroke="#FFFFFF" stroke-width="7"/>
+            <circle cx="48" cy="76" r="10" fill="${col.dot}" opacity="0.8"/>
+            <circle cx="92" cy="84" r="12" fill="${col.dot}" opacity="0.8"/>
+            <circle cx="68" cy="122" r="11" fill="${col.dot}" opacity="0.8"/>
+            ${taps >= 1 ? `<path d="M 32 92 L 54 80 L 68 96 L 86 78 L 108 94" fill="none" stroke="#1D3557" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+            ${taps >= 2 ? `<path d="M 42 118 L 62 104 L 80 120 L 98 106" fill="none" stroke="#1D3557" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+          </svg>
+          <span class="egg-tap-dots">${'⭐'.repeat(taps)}${'○'.repeat(3 - taps)}</span>
+        </button>
+      `;
+    }).join('');
+
+    row.querySelectorAll('.pro-egg-slot').forEach(el => {
+      el.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        const pe = e as PointerEvent;
+        const idx = parseInt(el.getAttribute('data-idx') || '0', 10);
+        const animal = this.eggAnimals[idx];
+
+        if (this.eggTaps[idx] >= 3) {
+          // Already hatched: replay joyful animal sound!
+          this.playEffect(animal.sfx, 0.92);
+          this.bursts.spawnBurst(pe.clientX, pe.clientY, 14, animal.color);
+          this.speech.speakForKey(animal.id, t(animal.spoken, lang));
+          return;
+        }
+
+        this.eggTaps[idx]++;
+        if (this.eggTaps[idx] === 1) {
+          this.engine.playInstrumentNote('marimba', 'C5', { volume: 0.9 });
+          this.bursts.spawnBurst(pe.clientX, pe.clientY, 8, '#FFD166');
+          this.renderEggs();
+        } else if (this.eggTaps[idx] === 2) {
+          this.engine.playInstrumentNote('marimba', 'E5', { volume: 0.9 });
+          this.bursts.spawnBurst(pe.clientX, pe.clientY, 12, '#FF9F1C');
+          this.renderEggs();
+        } else {
+          // HATCHED!
+          this.playEffect(animal.sfx, 0.92);
+          this.engine.playSound('fanfare.mp3', { volume: 0.6 });
+          this.bursts.spawnBurst(pe.clientX, pe.clientY, 20, animal.color);
+          if (banner) banner.textContent = `🐣 ${t(animal.label, lang)} — ${t(animal.soundWord, lang)}`;
+          this.speech.speakForKey(animal.id, t(animal.spoken, lang));
+          if (!appPrefs.get().bedtimeMode) {
+            confetti({ particleCount: 40, spread: 65, origin: { y: 0.6 } });
+          }
+          this.renderEggs();
+
+          // If all 3 eggs hatched, bring fresh eggs after a celebratory pause
+          if (this.eggTaps.every(v => v >= 3)) {
+            this.safeTimeout(() => {
+              if (banner) banner.textContent = lang === 'fr' ? '🥚 NOUVEAUX ŒUFS !' : '🥚 FRESH EGGS!';
+              this.resetEggs();
+            }, 2600);
+          }
+        }
+      });
+    });
+  }
+}
+
+// ============================================================================
+// GAME 9: PEEK-A-BOO MAGIC BOXES (Song: Where Is Thumbkin / Coucou Bébé!)
+// ============================================================================
+export class PeekabooBoxesGame extends BaseGameScene {
+  public readonly id = 'peekaboo_boxes';
+  public readonly title = 'Peek-a-Boo Boxes';
+  public readonly subtitle = 'Object Permanence & Surprise';
+  public readonly icon = '🙈';
+  public readonly themeColor = '#F72585';
+  public readonly songFile = 'songs/where_is_thumbkin.mp3';
+  public readonly songLabel = 'Peek-a-Boo!';
+
+  private hidingIdx = 1;
+  private hidingAnimal = ANIMAL_FRIENDS[1];
+  private isRevealed = false;
+
+  private readonly boxes = [
+    { id: 0, emoji: '🎁', color: '#FF6B8B', label: { en: 'Gift Box', fr: 'Cadeau' } },
+    { id: 1, emoji: '🌿', color: '#52B788', label: { en: 'Bush', fr: 'Buisson' } },
+    { id: 2, emoji: '☁️', color: '#4CC9F0', label: { en: 'Cloud', fr: 'Nuage' } },
+  ];
+
+  constructor(container: HTMLElement, bursts: TouchBurstManager) {
+    super(container, bursts);
+    this.initScene();
+  }
+
+  protected getPreloadAssets(): string[] {
+    return ['laugh.mp3', 'boing.mp3', 'chime.mp3', 'cow.mp3', 'dog.mp3', 'meow.mp3', 'duck.mp3', 'sheep.mp3', 'monkey.mp3'];
+  }
+
+  protected renderStageHtml(): string {
+    return `
+      <div class="pro-peek-banner" id="pro-peek-banner">🙈 PEEK-A-BOO!</div>
+      <div class="pro-peek-row" id="pro-peek-row"></div>
+    `;
+  }
+
+  protected bindStageEvents(): void {
+    this.pickNewHidingSpot();
+  }
+
+  protected onActivate(): void {
+    this.pickNewHidingSpot();
+  }
+
+  private pickNewHidingSpot(): void {
+    this.isRevealed = false;
+    const otherIndices = [0, 1, 2].filter(i => i !== this.hidingIdx);
+    this.hidingIdx = otherIndices[Math.floor(Math.random() * otherIndices.length)];
+    this.hidingAnimal = ANIMAL_FRIENDS[Math.floor(Math.random() * ANIMAL_FRIENDS.length)];
+    this.renderBoxes();
+  }
+
+  private renderBoxes(): void {
+    const row = this.stageEl.querySelector('#pro-peek-row') as HTMLElement;
+    const banner = this.stageEl.querySelector('#pro-peek-banner') as HTMLElement;
+    const lang = appPrefs.get().language;
+    if (!this.isRevealed && banner) {
+      banner.textContent = lang === 'fr' ? '🙈 COUCOU ! OÙ EST-IL ?' : '🙈 WHERE IS YOUR FRIEND?';
+    }
+
+    row.innerHTML = this.boxes.map(b => {
+      const isHidingHere = b.id === this.hidingIdx;
+      const revealedHere = isHidingHere && this.isRevealed;
+
+      return `
+        <button class="pro-peek-box ${isHidingHere && !this.isRevealed ? 'peeking-wiggle' : ''} ${revealedHere ? 'revealed pop-bounce' : ''}" data-box-id="${b.id}" style="--box-color:${b.color}">
+          ${revealedHere
+            ? `<div class="peek-revealed-art">${getAnimalSvg(this.hidingAnimal.id)}</div><span class="peek-box-label">${t(this.hidingAnimal.label, lang)}!</span>`
+            : `${isHidingHere ? '<span class="peeking-ears">👀</span>' : ''}<span class="peek-box-emoji">${b.emoji}</span><span class="peek-box-label">${t(b.label, lang)}</span>`
+          }
+        </button>
+      `;
+    }).join('');
+
+    row.querySelectorAll('.pro-peek-box').forEach(el => {
+      el.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        const pe = e as PointerEvent;
+        const boxId = parseInt(el.getAttribute('data-box-id') || '0', 10);
+
+        if (boxId === this.hidingIdx) {
+          if (this.isRevealed) return;
+          this.isRevealed = true;
+          this.playEffect(this.hidingAnimal.sfx, 0.9);
+          this.engine.playSound('laugh.mp3', { volume: 0.7 });
+          this.bursts.spawnBurst(pe.clientX, pe.clientY, 20, '#FFD166');
+          if (banner) {
+            banner.textContent = lang === 'fr'
+              ? `🎉 COUCOU ! ${t(this.hidingAnimal.label, lang)} !`
+              : `🎉 PEEK-A-BOO! ${t(this.hidingAnimal.label, lang)}!`;
+          }
+          this.speech.speakForKey(
+            this.hidingAnimal.id,
+            lang === 'fr' ? `Coucou ! ${t(this.hidingAnimal.label, lang)} !` : `Peek a boo! ${t(this.hidingAnimal.label, lang)}!`
+          );
+          if (!appPrefs.get().bedtimeMode) {
+            confetti({ particleCount: 35, spread: 60, origin: { y: 0.58 } });
+          }
+          this.renderBoxes();
+
+          this.safeTimeout(() => {
+            this.pickNewHidingSpot();
+          }, 2600);
+        } else {
+          // Gentle empty rustle + wiggle cue on real spot
+          this.playEffect('boing.mp3', 0.65, 1.3);
+          this.bursts.spawnBurst(pe.clientX, pe.clientY, 8, '#52B788');
+          el.classList.add('pop-bounce');
+          this.safeTimeout(() => el.classList.remove('pop-bounce'), 420);
+        }
+      });
+    });
+  }
+}
+

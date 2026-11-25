@@ -177,7 +177,7 @@ export class ParentGate {
 
           <!-- Scene Selector Carousel / Grid -->
           <div class="parent-section">
-            <label class="parent-label">Choose Musical Game (6 Rebuilt Games):</label>
+            <label class="parent-label">Choose Musical Game (9 Rebuilt Games):</label>
             <div class="parent-btn-group scene-grid-6">
               <button class="scene-select-btn ${this.currentScene === 'wheels' ? 'active' : ''}" data-scene="wheels">
                 <span class="scene-btn-icon">🚌</span>
@@ -202,6 +202,18 @@ export class ParentGate {
               <button class="scene-select-btn ${this.currentScene === 'musical_me' ? 'active' : ''}" data-scene="musical_me">
                 <span class="scene-btn-icon">🎹</span>
                 <span class="scene-btn-title">Rainbow Xylophone</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'bubble_pop' ? 'active' : ''}" data-scene="bubble_pop">
+                <span class="scene-btn-icon">🫧</span>
+                <span class="scene-btn-title">Magic Bubble Pop</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'surprise_eggs' ? 'active' : ''}" data-scene="surprise_eggs">
+                <span class="scene-btn-icon">🐣</span>
+                <span class="scene-btn-title">Hatch Surprise Eggs</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'peekaboo_boxes' ? 'active' : ''}" data-scene="peekaboo_boxes">
+                <span class="scene-btn-icon">🙈</span>
+                <span class="scene-btn-title">Peek-a-Boo Boxes</span>
               </button>
             </div>
           </div>

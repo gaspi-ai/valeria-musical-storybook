@@ -19,8 +19,11 @@ import {
   TwinkleStarGame,
   RowBoatGame,
   RainbowXylophoneGame,
+  MagicBubblePopGame,
+  SurpriseEggsGame,
+  PeekabooBoxesGame,
 } from './games/GameScenes';
-import { SongsJukebox } from './components/SongsJukebox';
+import { SongsTheater } from './songs/SongsTheater';
 import { LearningStudio } from './components/LearningStudio';
 import { StorybookShelf } from './components/StorybookShelf';
 import { SleepyTimer } from './components/SleepyTimer';
@@ -38,8 +41,11 @@ class ToddlerStorybookApp {
   private itsyBitsyScene: ItsyBitsyGame;
   private twinkleStarScene: TwinkleStarGame;
   private rowBoatScene: RowBoatGame;
+  private bubblePopScene: MagicBubblePopGame;
+  private surpriseEggsScene: SurpriseEggsGame;
+  private peekabooBoxesScene: PeekabooBoxesGame;
 
-  private songsJukebox: SongsJukebox;
+  private songsTheater: SongsTheater;
   private learningStudio: LearningStudio;
   private storybookShelf: StorybookShelf;
   private sleepyTimer: SleepyTimer;
@@ -59,13 +65,16 @@ class ToddlerStorybookApp {
     // 2. Hardware Touch Lockout & Global Multi-Touch Slap Handler
     this.setupHardwareLockout();
 
-    // 3. Initialize All 6 Rebuilt Flagship Musical Games (Studio Audio Discipline: Zero Noisy Loops!)
+    // 3. Initialize All 9 Rebuilt Flagship Musical Games (Studio Audio Discipline: Zero Noisy Loops!)
     this.wheelsScene = new WheelsBusGame(this.appRoot, this.bursts);
     this.oldMacDonaldScene = new OldMacDonaldGame(this.appRoot, this.bursts);
     this.itsyBitsyScene = new ItsyBitsyGame(this.appRoot, this.bursts);
     this.twinkleStarScene = new TwinkleStarGame(this.appRoot, this.bursts);
     this.rowBoatScene = new RowBoatGame(this.appRoot, this.bursts);
     this.musicalMeScene = new RainbowXylophoneGame(this.appRoot, this.bursts);
+    this.bubblePopScene = new MagicBubblePopGame(this.appRoot, this.bursts);
+    this.surpriseEggsScene = new SurpriseEggsGame(this.appRoot, this.bursts);
+    this.peekabooBoxesScene = new PeekabooBoxesGame(this.appRoot, this.bursts);
 
     // Register with SceneManager
     this.sceneManager.registerScene(this.wheelsScene);
@@ -74,9 +83,12 @@ class ToddlerStorybookApp {
     this.sceneManager.registerScene(this.twinkleStarScene);
     this.sceneManager.registerScene(this.rowBoatScene);
     this.sceneManager.registerScene(this.musicalMeScene);
+    this.sceneManager.registerScene(this.bubblePopScene);
+    this.sceneManager.registerScene(this.surpriseEggsScene);
+    this.sceneManager.registerScene(this.peekabooBoxesScene);
 
-    // 4. Dedicated Songs Jukebox & Little Learner Studio (EN / FR)
-    this.songsJukebox = new SongsJukebox(this.appRoot, () => {
+    // 4. Brand-New Interactive Songs Theater & Little Learner Studio (EN / FR)
+    this.songsTheater = new SongsTheater(this.appRoot, this.bursts, () => {
       this.handleExitJukebox();
     });
     this.learningStudio = new LearningStudio(this.appRoot, this.bursts, () => {
@@ -95,7 +107,7 @@ class ToddlerStorybookApp {
 
     this.sleepyTimer = new SleepyTimer(this.appRoot, {
       onSleepStart: () => {
-        this.songsJukebox.closeJukebox();
+        this.songsTheater.closeTheater();
         this.learningStudio.closeStudio();
         this.storybookShelf.close();
         this.sceneManager.deactivateActiveScene();
@@ -266,7 +278,7 @@ class ToddlerStorybookApp {
     this.floatingJukeboxBtn.style.display = 'none';
     this.floatingLearnBtn.style.display = 'none';
     this.floatingShelfBtn.style.display = 'none';
-    this.songsJukebox.openJukebox();
+    this.songsTheater.openTheater();
   }
 
   private handleExitJukebox(): void {
@@ -279,7 +291,7 @@ class ToddlerStorybookApp {
   }
 
   public openLearningStudio(): void {
-    this.songsJukebox.closeJukebox();
+    this.songsTheater.closeTheater();
     this.storybookShelf.close();
     this.sceneManager.deactivateActiveScene();
     this.engine.stopAllAudio();
@@ -306,19 +318,19 @@ class ToddlerStorybookApp {
     // Prevent right-click context menu
     window.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
 
-    // Helper to check if any settings, guide modal, Jukebox, Learning Studio, or Shelf is open
+    // Helper to check if any settings, guide modal, Songs Theater, Learning Studio, or Shelf is open
     const isInteractiveOverlayOpen = (): boolean => {
       const activeModal = document.querySelector('.parent-modal-overlay:not([style*="display: none"])');
-      const activeJukebox = document.querySelector('.toddler-jukebox-container:not([style*="display: none"])');
+      const activeSongs = document.querySelector('.songs-theater-container:not([style*="display: none"])');
       const activeLearning = document.querySelector('.learning-studio-container:not([style*="display: none"])');
       const activeShelf = document.querySelector('.storybook-shelf-overlay:not([style*="display: none"])');
-      return !!activeModal || !!activeJukebox || !!activeLearning || !!activeShelf;
+      return !!activeModal || !!activeSongs || !!activeLearning || !!activeShelf;
     };
 
     // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal & overlays
     window.addEventListener('touchstart', (e) => {
       const target = e.target as HTMLElement | null;
-      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .floating-shelf-btn, .toddler-jukebox-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay'))) {
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .floating-shelf-btn, .songs-theater-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay'))) {
         return;
       }
       if (e.touches.length > 1) {
@@ -328,7 +340,7 @@ class ToddlerStorybookApp {
 
     window.addEventListener('touchmove', (e) => {
       const target = e.target as HTMLElement | null;
-      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .toddler-jukebox-container, .jukebox-grid-view, .learning-studio-container, .learning-hub-view, .storybook-shelf-overlay, .shelf-sheet'))) {
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .songs-theater-container, .songs-hub-view, .learning-studio-container, .learning-hub-view, .storybook-shelf-overlay, .shelf-sheet'))) {
         return;
       }
       e.preventDefault();
@@ -337,7 +349,7 @@ class ToddlerStorybookApp {
     // Global multi-touch burst reaction: Any tap or slap anywhere spawns sparkles!
     window.addEventListener('pointerdown', (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .floating-shelf-btn, .toddler-jukebox-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay')) {
+      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .floating-shelf-btn, .songs-theater-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay')) {
         return;
       }
       // Sparkle if tapping empty scene background

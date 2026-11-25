@@ -1,0 +1,570 @@
+/* ==========================================================================
+   Brand-New Interactive Songs Theater (src/songs/songs.css)
+   iPhone-first (100dvh, safe-area aware), huge touch targets, beat-sync motion
+   ========================================================================== */
+
+/* Floating "🎶 SONGS" button on main screen */
+.floating-jukebox-btn {
+  position: fixed;
+  top: calc(14px + var(--safe-top));
+  left: calc(14px + var(--safe-left));
+  z-index: 860;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 3px solid #FFFFFF;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.92rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.38);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-jukebox-btn:active {
+  transform: scale(0.92);
+}
+
+@media (max-width: 410px) {
+  .floating-jukebox-btn {
+    padding: 9px 12px;
+    font-size: 0.82rem;
+  }
+}
+
+.songs-theater-container {
+  position: fixed;
+  inset: 0;
+  z-index: 955;
+  width: 100%;
+  height: 100dvh;
+  background: linear-gradient(165deg, #EEF2FF 0%, #FDF2F8 55%, #FEF3C7 100%);
+  overflow: hidden;
+  font-family: var(--font-storybook);
+}
+
+/* 1. HUB VIEW */
+.songs-hub-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: calc(14px + var(--safe-top)) calc(14px + var(--safe-right)) calc(20px + var(--safe-bottom)) calc(14px + var(--safe-left));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+.songs-hub-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.songs-back-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 2px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #1D3557;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.85rem;
+  box-shadow: 0 3px 10px rgba(29, 53, 87, 0.1);
+  cursor: pointer;
+}
+
+.songs-hub-heading {
+  text-align: center;
+}
+
+.songs-hub-heading h1 {
+  font-size: clamp(1.35rem, 5vw, 1.9rem);
+  font-weight: 900;
+  color: #1D3557;
+  margin: 0;
+}
+
+.songs-hub-heading p {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #475569;
+  margin: 4px 0 0;
+}
+
+.songs-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  .songs-hub-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.theater-song-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 158px;
+  padding: 16px 10px;
+  border-radius: 26px;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 10px 24px rgba(29, 53, 87, 0.14);
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: center;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.theater-song-card:active {
+  transform: scale(0.94);
+}
+
+.ts-card-icon {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.14));
+}
+
+.ts-card-title {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #1D3557;
+  line-height: 1.15;
+}
+
+.theater-song-card[data-song-id="brahms_moon"] .ts-card-title,
+.theater-song-card[data-song-id="brahms_moon"] .ts-card-sub {
+  color: #FFFFFF;
+}
+
+.ts-card-sub {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 3px;
+}
+
+.ts-card-pill {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1D3557;
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+/* 2. FULLSCREEN INTERACTIVE STAGE */
+.songs-stage-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: calc(12px + var(--safe-top)) calc(14px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(14px + var(--safe-left));
+  touch-action: none;
+}
+
+.songs-stage-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  z-index: 10;
+}
+
+.songs-title-badge {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1D3557;
+  font-size: clamp(1rem, 4.2vw, 1.3rem);
+  font-weight: 900;
+  padding: 10px 16px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.songs-exit-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.songs-exit-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.songs-exit-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 3.5;
+}
+
+.songs-exit-ring {
+  fill: none;
+  stroke: #FFD166;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.songs-exit-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #FFFFFF;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.songs-exit-inner small {
+  font-size: 0.48rem;
+  margin-top: 2px;
+}
+
+.songs-stage-canvas {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  min-height: 0;
+}
+
+.songs-stage-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 8px;
+  z-index: 10;
+}
+
+.songs-ctrl-btn {
+  border: 3px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1D3557;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.95rem;
+  padding: 12px 22px;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.songs-next-btn {
+  background: linear-gradient(135deg, #4361EE 0%, #7209B7 100%);
+  color: #FFFFFF;
+}
+
+/* Beat Sync Bob */
+.beat-bob {
+  animation: songBeatBob 0.28s ease-out;
+}
+
+@keyframes songBeatBob {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Song 1: Happy & Clap */
+.ts-stage-happy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.ts-sun-top {
+  width: 82px;
+  height: 82px;
+  cursor: pointer;
+}
+
+.ts-hero-actor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  border: 6px solid #FFFFFF;
+  border-radius: 36px;
+  padding: 20px 34px;
+  box-shadow: 0 16px 32px rgba(29, 53, 87, 0.16);
+  cursor: pointer;
+}
+
+.ts-bear-emoji { font-size: 5.5rem; line-height: 1; }
+.ts-clap-hands { font-size: 2.6rem; margin-top: -6px; }
+
+.ts-action-tag {
+  margin-top: 8px;
+  background: #FF6B6B;
+  color: #FFFFFF;
+  font-size: 0.86rem;
+  font-weight: 900;
+  padding: 5px 14px;
+  border-radius: 999px;
+}
+
+.ts-friends-row {
+  display: flex;
+  gap: 12px;
+}
+
+.ts-mini-actor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 4px solid #FFFFFF;
+  border-radius: 24px;
+  padding: 12px 18px;
+  font-size: 2.4rem;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.ts-mini-actor span {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #1D3557;
+  margin-top: 4px;
+}
+
+/* Song 2: Mary Had a Little Lamb */
+.ts-stage-lamb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.ts-lamb-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: 6px solid #FFFFFF;
+  border-radius: 38px;
+  padding: 20px 30px;
+  box-shadow: 0 16px 32px rgba(29, 53, 87, 0.14);
+  cursor: pointer;
+}
+
+.ts-lamb-svg-wrap {
+  width: 185px;
+  height: 185px;
+}
+
+.ts-flowers-row {
+  display: flex;
+  gap: 14px;
+}
+
+.ts-bloom-flower {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 2.4rem;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+/* Song 3: ABC Blocks */
+.ts-stage-abc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.ts-abc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+}
+
+.ts-abc-block {
+  aspect-ratio: 1;
+  border-radius: 26px;
+  border: 5px solid #FFFFFF;
+  background: var(--block-color);
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-size: clamp(2.4rem, 10vw, 3.6rem);
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(29, 53, 87, 0.18);
+  cursor: pointer;
+}
+
+.ts-abc-more-btn {
+  border: 4px solid #FFFFFF;
+  background: #1D3557;
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Song 4: Five Little Ducks */
+.ts-ducks-pond {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  max-width: 440px;
+}
+
+.ts-duck-toy {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  border-radius: 30px;
+  border: 4px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(3, 4, 94, 0.18);
+}
+
+.ts-duck-art { width: 88px; height: 88px; }
+
+.ts-duck-num {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FF6B00;
+  color: #FFFFFF;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #FFFFFF;
+}
+
+.duck-dive {
+  animation: tsDuckDive 0.55s ease-in-out;
+}
+
+@keyframes tsDuckDive {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  45% { transform: translateY(22px) rotate(-14deg) scale(0.9); }
+}
+
+/* Song 5: Baby Bumblebee */
+.ts-stage-bee {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
+}
+
+.ts-flying-bee {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  font-size: 4.5rem;
+  z-index: 5;
+  pointer-events: none;
+  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), top 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.2));
+}
+
+.ts-bee-flower {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 5px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 3.4rem;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.14);
+}
+
+/* Song 6: Brahms' Lullaby */
+.ts-stage-lullaby {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ts-lullaby-moon {
+  width: 190px;
+  height: 190px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  filter: drop-shadow(0 0 28px rgba(255, 224, 102, 0.55));
+}
+
+.ts-lullaby-star {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  border: none;
+  font-size: 3rem;
+  cursor: pointer;
+  filter: drop-shadow(0 0 16px rgba(255, 224, 102, 0.8));
+}
