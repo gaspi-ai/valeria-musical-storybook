@@ -262,6 +262,7 @@ class ToddlerStorybookApp {
     this.floatingShelfBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      this.engine.stopAllAudio();
       this.storybookShelf.open();
     });
     this.appRoot.appendChild(this.floatingShelfBtn);

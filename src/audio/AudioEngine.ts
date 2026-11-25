@@ -69,6 +69,7 @@ export class AudioEngine {
   private vocalGainNode: GainNode | null = null;
   private vocalEndedCallback: (() => void) | null = null;
   private isVocalTrackPlaying: boolean = false;
+  private vocalRequestId: number = 0;
 
   // Engine rumble node for bus
   private engineSource: AudioBufferSourceNode | null = null;
@@ -1347,8 +1348,12 @@ export class AudioEngine {
    * Guarantees only ONE song ever plays at a time and Master Volume controls everything.
    */
   public async playVocalTrack(audioPath: string, onEnded?: () => void, loop: boolean = true): Promise<boolean> {
+    const reqId = ++this.vocalRequestId;
     if (!this.ctx) await this.unlock();
-    this.stopVocalTrack();
+    if (reqId !== this.vocalRequestId) return false;
+
+    // Hard-stop any previous track without invalidating our own reqId
+    this.hardSilenceVocalElement();
     this.pauseSongTrack();
 
     if (typeof window === 'undefined') return false;
@@ -1381,10 +1386,20 @@ export class AudioEngine {
 
     this.vocalEndedCallback = onEnded || null;
     try {
+      this.vocalAudioEl.muted = false;
       this.vocalAudioEl.loop = loop;
       this.vocalAudioEl.src = this.resolveAudioPath(audioPath);
       this.vocalAudioEl.currentTime = 0;
+      if (this.ctx && this.vocalGainNode) {
+        this.vocalGainNode.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.vocalGainNode.gain.setValueAtTime(0.92, this.ctx.currentTime);
+      }
       await this.vocalAudioEl.play();
+      // If user already left/switched while play() was buffering, kill immediately!
+      if (reqId !== this.vocalRequestId) {
+        this.hardSilenceVocalElement();
+        return false;
+      }
       this.isVocalTrackPlaying = true;
       return true;
     } catch (err) {
@@ -1394,16 +1409,30 @@ export class AudioEngine {
     }
   }
 
-  public stopVocalTrack(): void {
+  private hardSilenceVocalElement(): void {
     this.isVocalTrackPlaying = false;
     this.vocalEndedCallback = null;
+    if (this.ctx && this.vocalGainNode) {
+      try {
+        this.vocalGainNode.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.vocalGainNode.gain.setValueAtTime(0, this.ctx.currentTime);
+      } catch {}
+    }
     if (this.vocalAudioEl) {
       try {
+        this.vocalAudioEl.muted = true;
+        this.vocalAudioEl.loop = false;
         this.vocalAudioEl.pause();
         this.vocalAudioEl.currentTime = 0;
         this.vocalAudioEl.removeAttribute('src');
+        this.vocalAudioEl.load(); // Forces iOS Safari WebKit to flush hardware audio buffer immediately
       } catch {}
     }
+  }
+
+  public stopVocalTrack(): void {
+    this.vocalRequestId++; // Invalidate any in-flight playVocalTrack() calls
+    this.hardSilenceVocalElement();
   }
 
   public get isVocalPlaying(): boolean {

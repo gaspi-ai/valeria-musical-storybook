@@ -854,7 +854,8 @@ export class ParentGate {
   }
 
   public openModal(): void {
-    this.engine.playSound('chime.mp3', { volume: 0.8 });
+    this.engine.stopAllAudio();
+    this.engine.playSound('chime.mp3', { volume: 0.6 });
     this.updateModalLockBtnState();
     this.renderParentVoiceSlots();
     this.renderLearningInsights();

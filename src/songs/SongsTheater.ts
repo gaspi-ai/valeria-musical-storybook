@@ -283,6 +283,7 @@ export class SongsTheater {
   public closeTheater(): void {
     this.isOpen = false;
     this.closeSong();
+    this.engine.stopAllAudio();
     this.element.style.display = 'none';
   }
 
@@ -311,7 +312,7 @@ export class SongsTheater {
     this.clearTimers();
     this.isPlaying = false;
     this.activeSong = null;
-    this.engine.stopVocalTrack();
+    this.engine.stopAllAudio();
     this.speech.stop();
     this.stageCanvasEl.innerHTML = '';
     this.stageEl.style.display = 'none';
