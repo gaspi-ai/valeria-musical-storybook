@@ -85,6 +85,10 @@ export class BalloonFruitGame extends BaseGameScene {
     this.refreshPlayfield();
   }
 
+  protected onLanguageChange(): void {
+    this.refreshPlayfield();
+  }
+
   protected onDeactivate(): void {
     if (this.spawnTimer !== null) {
       clearInterval(this.spawnTimer);
@@ -188,6 +192,7 @@ export class BabyPhoneGame extends BaseGameScene {
   public readonly themeColor = '#4361EE';
   public readonly songFile = 'songs/baby_bumblebee.mp3';
   public readonly songLabel = 'Toy Phone Melody';
+  protected readonly autoStartMusic = false;
 
   private dialed = '';
   private isCalling = false;
@@ -348,6 +353,7 @@ export class DrumPianoRoomGame extends BaseGameScene {
   public readonly themeColor = '#FF9F1C';
   public readonly songFile = 'songs/abc_song.mp3';
   public readonly songLabel = 'Music Room Jam';
+  protected readonly autoStartMusic = false;
 
   private roomMode: 'drums' | 'piano' = 'drums';
 
@@ -490,6 +496,7 @@ export class FireworksShowGame extends BaseGameScene {
   private canvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
   private sparks: FwSpark[] = [];
+  private activePointers: Set<number> = new Set();
   private rafId = 0;
   private resizeFn: (() => void) | null = null;
   private lastDragBurst = 0;
@@ -535,20 +542,32 @@ export class FireworksShowGame extends BaseGameScene {
 
     this.canvas.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
+      this.activePointers.add(e.pointerId);
       launchAt(e.clientX, e.clientY, true);
     });
 
     this.canvas.addEventListener('pointermove', (e) => {
-      if (e.buttons === 0 && e.pressure === 0) return;
+      if (!this.activePointers.has(e.pointerId)) return;
       const now = Date.now();
-      if (now - this.lastDragBurst > 160) {
+      if (now - this.lastDragBurst > 140) {
         this.lastDragBurst = now;
         launchAt(e.clientX, e.clientY, false);
       }
     });
+
+    const releasePointer = (e: PointerEvent) => {
+      this.activePointers.delete(e.pointerId);
+    };
+    this.canvas.addEventListener('pointerup', releasePointer);
+    this.canvas.addEventListener('pointercancel', releasePointer);
+    this.canvas.addEventListener('pointerleave', releasePointer);
   }
 
   protected onActivate(): void {
+    if (this.resizeFn) {
+      window.removeEventListener('resize', this.resizeFn);
+      this.resizeFn = null;
+    }
     const resize = () => {
       const rect = this.canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -573,6 +592,7 @@ export class FireworksShowGame extends BaseGameScene {
     cancelAnimationFrame(this.rafId);
     this.rafId = 0;
     this.sparks = [];
+    this.activePointers.clear();
     if (this.resizeFn) {
       window.removeEventListener('resize', this.resizeFn);
       this.resizeFn = null;

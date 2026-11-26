@@ -4,7 +4,6 @@
    Inspired by classic Duck Duck Moose apps ("Wheels on the Bus", "Musical Me")
    ========================================================================== */
 
-@import './scenes.css';
 @import './songs/songs.css';
 @import './learning.css';
 @import './master.css';

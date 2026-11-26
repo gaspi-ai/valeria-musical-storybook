@@ -236,16 +236,13 @@ export class ParentGate {
 
           <!-- Audio Mode Selector -->
           <div class="parent-section">
-            <label class="parent-label">Audio & Music Mode:</label>
+            <label class="parent-label">Background Music Mode:</label>
             <div class="parent-btn-group">
-              <button class="mode-select-btn ${this.currentAudioMode === 'song' ? 'active' : ''}" data-mode="song">
-                🎵 Studio Song
-              </button>
-              <button class="mode-select-btn ${this.currentAudioMode === 'ensemble' ? 'active' : ''}" data-mode="ensemble">
-                🎸 Live Acoustic Band
+              <button class="mode-select-btn ${this.currentAudioMode !== 'free' ? 'active' : ''}" data-mode="song">
+                🎵 Music On
               </button>
               <button class="mode-select-btn ${this.currentAudioMode === 'free' ? 'active' : ''}" data-mode="free">
-                🎈 Free Play Sounds
+                🎈 Free Play (SFX Only)
               </button>
             </div>
           </div>

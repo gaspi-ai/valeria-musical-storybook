@@ -70,6 +70,7 @@ export class AudioEngine {
   private vocalEndedCallback: (() => void) | null = null;
   private isVocalTrackPlaying: boolean = false;
   private vocalRequestId: number = 0;
+  private vocalStopListeners: Set<() => void> = new Set();
 
   // Engine rumble node for bus
   private engineSource: AudioBufferSourceNode | null = null;
@@ -1430,9 +1431,20 @@ export class AudioEngine {
     }
   }
 
+  public onVocalStop(cb: () => void): () => void {
+    this.vocalStopListeners.add(cb);
+    return () => this.vocalStopListeners.delete(cb);
+  }
+
   public stopVocalTrack(): void {
     this.vocalRequestId++; // Invalidate any in-flight playVocalTrack() calls
+    const wasPlaying = this.isVocalTrackPlaying;
     this.hardSilenceVocalElement();
+    if (wasPlaying) {
+      for (const cb of this.vocalStopListeners) {
+        try { cb(); } catch {}
+      }
+    }
   }
 
   public get isVocalPlaying(): boolean {

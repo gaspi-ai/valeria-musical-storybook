@@ -32,43 +32,72 @@ body.bedtime-mode .meadow-butterfly {
 }
 
 /* --------------------------------------------------------------------------
-   2. FLOATING STORYBOOK SHELF BUTTON ("📚")
+   2. CLEAN NON-OVERLAPPING TOP-LEFT NAVIGATION PILLS (iPhone SE -> iPad)
    -------------------------------------------------------------------------- */
-.floating-shelf-btn {
+.top-nav-pills {
   position: fixed;
-  top: calc(14px + var(--safe-top));
-  left: calc(248px + var(--safe-left));
+  top: calc(12px + var(--safe-top));
+  left: calc(10px + var(--safe-left));
   z-index: 860;
   display: flex;
   align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 132px);
+}
+
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  border: 3px solid #FFFFFF;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #FF9F1C 0%, #F77F00 100%);
-  font-size: 1.25rem;
-  box-shadow: 0 6px 18px rgba(247, 127, 0, 0.36);
+  gap: 5px;
+  height: 42px;
+  padding: 0 12px;
+  border: 2.5px solid #FFFFFF;
+  border-radius: 999px;
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.3px;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.22);
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.floating-shelf-btn:active {
-  transform: scale(0.9);
+.nav-pill:active {
+  transform: scale(0.92);
 }
 
-@media (max-width: 410px) {
-  .floating-learn-btn {
-    left: calc(122px + var(--safe-left));
-    padding: 9px 12px;
-    font-size: 0.82rem;
+.nav-pill-songs {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+}
+
+.nav-pill-learn {
+  background: linear-gradient(135deg, #06D6A0 0%, #118AB2 100%);
+}
+
+.nav-pill-shelf {
+  width: 42px;
+  padding: 0;
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, #FF9F1C 0%, #F77F00 100%);
+}
+
+@media (max-width: 390px) {
+  .top-nav-pills {
+    gap: 5px;
   }
-  .floating-shelf-btn {
-    left: calc(218px + var(--safe-left));
-    width: 42px;
-    height: 42px;
-    font-size: 1.1rem;
+  .nav-pill {
+    height: 38px;
+    padding: 0 10px;
+    font-size: 0.74rem;
+  }
+  .nav-pill-shelf {
+    width: 38px;
+    padding: 0;
+    font-size: 1.05rem;
   }
 }
 

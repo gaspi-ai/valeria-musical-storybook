@@ -241,6 +241,19 @@ export class OldMacDonaldGame extends BaseGameScene {
     `;
   }
 
+  protected onLanguageChange(): void {
+    const lang = appPrefs.get().language;
+    this.stageEl.querySelectorAll('.pro-farm-card').forEach(card => {
+      const id = card.getAttribute('data-animal-id');
+      const animal = ANIMAL_FRIENDS.find(a => a.id === id);
+      if (!animal) return;
+      const nameEl = card.querySelector('.pro-farm-name');
+      const soundEl = card.querySelector('.pro-farm-sound');
+      if (nameEl) nameEl.textContent = t(animal.label, lang);
+      if (soundEl) soundEl.textContent = t(animal.soundWord, lang);
+    });
+  }
+
   protected bindStageEvents(): void {
     this.stageEl.querySelectorAll('.pro-farm-card').forEach(card => {
       card.addEventListener('pointerdown', (e) => {
@@ -681,6 +694,10 @@ export class MagicBubblePopGame extends BaseGameScene {
   }
 
   protected onActivate(): void {
+    if (this.spawnTimer !== null) {
+      clearInterval(this.spawnTimer);
+      this.spawnTimer = null;
+    }
     const sky = this.stageEl.querySelector('#pro-bubble-sky') as HTMLElement;
     sky.querySelectorAll('.magic-bubble').forEach(b => b.remove());
     // Spawn initial batch of giant bubbles
@@ -794,6 +811,10 @@ export class SurpriseEggsGame extends BaseGameScene {
 
   protected onActivate(): void {
     this.resetEggs();
+  }
+
+  protected onLanguageChange(): void {
+    this.renderEggs();
   }
 
   private resetEggs(): void {
@@ -930,6 +951,10 @@ export class PeekabooBoxesGame extends BaseGameScene {
 
   protected onActivate(): void {
     this.pickNewHidingSpot();
+  }
+
+  protected onLanguageChange(): void {
+    this.renderBoxes();
   }
 
   private pickNewHidingSpot(): void {

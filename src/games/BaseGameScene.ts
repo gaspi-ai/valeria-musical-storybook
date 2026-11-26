@@ -12,6 +12,7 @@
 import { AudioEngine } from '../audio/AudioEngine';
 import { TouchBurstManager } from '../components/TouchBurstManager';
 import { SpeechHelper } from '../learning/SpeechHelper';
+import { appPrefs } from '../state/AppPreferences';
 import type { StorybookScene } from '../scenes/SceneManager';
 
 export abstract class BaseGameScene implements StorybookScene {
@@ -22,6 +23,7 @@ export abstract class BaseGameScene implements StorybookScene {
   public abstract readonly themeColor: string;
   public abstract readonly songFile: string;
   public abstract readonly songLabel: string;
+  protected readonly autoStartMusic: boolean = true;
 
   protected container: HTMLElement;
   protected bursts: TouchBurstManager;
@@ -71,6 +73,21 @@ export abstract class BaseGameScene implements StorybookScene {
       this.toggleThemeSong();
     });
 
+    // Keep music button UI 100% synced whenever AudioEngine stops music (e.g. opening Shelf or Menu)
+    this.engine.onVocalStop(() => {
+      if (this.isMusicOn) {
+        this.isMusicOn = false;
+        this.updateMusicButton();
+      }
+    });
+
+    // Live-update localized labels when EN/FR language toggles
+    appPrefs.subscribe(() => {
+      if (this.isActive) {
+        this.onLanguageChange();
+      }
+    });
+
     this.bindStageEvents();
   }
 
@@ -81,6 +98,7 @@ export abstract class BaseGameScene implements StorybookScene {
   }
   protected onActivate(): void {}
   protected onDeactivate(): void {}
+  protected onLanguageChange(): void {}
 
   protected safeTimeout(fn: () => void, ms: number): number {
     const id = window.setTimeout(() => {
@@ -106,7 +124,7 @@ export abstract class BaseGameScene implements StorybookScene {
     this.engine.playSound(sfx, { volume, pitch });
   }
 
-  protected async startThemeSong(): Promise<void> {
+  public async startThemeSong(): Promise<void> {
     if (!this.isActive) return;
     this.isMusicOn = true;
     this.updateMusicButton();
@@ -120,7 +138,7 @@ export abstract class BaseGameScene implements StorybookScene {
     }
   }
 
-  protected stopThemeSong(): void {
+  public stopThemeSong(): void {
     this.isMusicOn = false;
     this.engine.stopVocalTrack();
     this.updateMusicButton();
@@ -144,13 +162,19 @@ export abstract class BaseGameScene implements StorybookScene {
   public activate(): void {
     this.isActive = true;
     this.element.style.display = 'flex';
+    this.updateMusicButton();
     // Lazy-load only this scene's crisp SFX
     for (const asset of this.getPreloadAssets()) {
       this.engine.loadBuffer(asset).catch(() => {});
     }
     this.onActivate();
-    // Auto-start the scene's single accurate studio melody cleanly
-    this.startThemeSong();
+    // Auto-start theme song ONLY for games that want it and when not in Free Play (SFX-only) mode
+    if (this.autoStartMusic && appPrefs.get().audioMode !== 'free') {
+      this.startThemeSong();
+    } else {
+      this.isMusicOn = false;
+      this.updateMusicButton();
+    }
   }
 
   public deactivate(): void {

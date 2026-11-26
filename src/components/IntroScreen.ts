@@ -103,13 +103,10 @@ export class IntroScreen {
       this.bursts.spawnBurst(clientX, clientY, 20, '#FFD166');
       this.element.classList.add('fade-out');
 
-      // Unlock Web Audio inside the gesture, then play welcome chime once running
+      // Unlock Web Audio inside the gesture, then play a quick welcome chime
       engine.unlock().then(() => {
-        engine.playInstrumentNote('glock', 'C4', { volume: 0.8 });
-        setTimeout(() => engine.playInstrumentNote('glock', 'E4', { volume: 0.8 }), 100);
-        setTimeout(() => engine.playInstrumentNote('glock', 'G4', { volume: 0.85 }), 200);
-        setTimeout(() => engine.playInstrumentNote('glock', 'C5', { volume: 0.9 }), 300);
-        setTimeout(() => engine.playSound('fanfare.mp3', { volume: 0.5 }), 400);
+        engine.playInstrumentNote('glock', 'C5', { volume: 0.7 });
+        setTimeout(() => engine.playInstrumentNote('glock', 'G5', { volume: 0.75 }), 110);
       }).catch(() => {});
 
       setTimeout(() => {
@@ -117,7 +114,7 @@ export class IntroScreen {
           this.element.parentNode.removeChild(this.element);
         }
         this.onStart();
-      }, 450);
+      }, 360);
     };
 
     const tapBtn = this.element.querySelector('#intro-start-button') as HTMLElement;

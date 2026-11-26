@@ -59,9 +59,7 @@ class ToddlerStorybookApp {
   private learningStudio: LearningStudio;
   private storybookShelf: StorybookShelf;
   private sleepyTimer: SleepyTimer;
-  private floatingJukeboxBtn!: HTMLElement;
-  private floatingLearnBtn!: HTMLElement;
-  private floatingShelfBtn!: HTMLElement;
+  private topNavBar!: HTMLElement;
   private parentGate: ParentGate;
 
   constructor() {
@@ -112,9 +110,7 @@ class ToddlerStorybookApp {
     this.learningStudio = new LearningStudio(this.appRoot, this.bursts, () => {
       this.handleExitLearningStudio();
     });
-    this.createFloatingJukeboxButton();
-    this.createFloatingLearnButton();
-    this.createFloatingShelfButton();
+    this.createTopNavBar();
 
     // 4b. Visual Storybook Home Shelf & Gentle Sleepy Bye-Bye Timer
     this.storybookShelf = new StorybookShelf(this.appRoot, this.sceneManager.getScenes(), {
@@ -194,21 +190,14 @@ class ToddlerStorybookApp {
   }
 
   private handleInfantLockChange(locked: boolean): void {
-    // Hide exposed floating SONGS, LEARN & SHELF buttons while Infant Lock is active
-    const displayVal = locked ? 'none' : 'flex';
-    if (this.floatingJukeboxBtn) {
-      this.floatingJukeboxBtn.style.display = displayVal;
-    }
-    if (this.floatingLearnBtn) {
-      this.floatingLearnBtn.style.display = displayVal;
-    }
-    if (this.floatingShelfBtn) {
-      this.floatingShelfBtn.style.display = displayVal;
+    // Hide the top-left navigation pills while Infant Lock is active
+    if (this.topNavBar) {
+      this.topNavBar.style.display = locked ? 'none' : 'flex';
     }
   }
 
   /**
-   * Seamlessly switches between any of the 6 rebuilt musical games.
+   * Seamlessly switches between any of the 13 rebuilt musical games.
    */
   public async switchScene(sceneId: string): Promise<void> {
     this.engine.stopAllAudio();
@@ -216,14 +205,16 @@ class ToddlerStorybookApp {
   }
 
   /**
-   * Changes Audio Mode between Studio Song (music on) and Free Play (music off).
+   * Changes Audio Mode between Music On and Free Play (SFX Only) without re-activating scene timers.
    */
   public setAudioMode(mode: 'song' | 'ensemble' | 'free'): void {
+    const active = this.sceneManager.getActiveScene() as { startThemeSong?: () => void; stopThemeSong?: () => void } | null;
     if (mode === 'free') {
+      active?.stopThemeSong?.();
       this.engine.stopVocalTrack();
       this.engine.pauseSongTrack();
     } else {
-      this.sceneManager.activateActiveScene();
+      active?.startThemeSong?.();
     }
   }
 
@@ -232,79 +223,64 @@ class ToddlerStorybookApp {
   }
 
   /**
-   * Floating "🎶 SONGS" button on main screen to quickly jump to Jukebox.
+   * Clean, non-overlapping top-left navigation bar (Songs, Learn, Games Shelf)
+   * engineered for iPhone SE (375px), iPhone 12-16 Pro, and iPad safe areas.
    */
-  private createFloatingJukeboxButton(): void {
-    this.floatingJukeboxBtn = document.createElement('button');
-    this.floatingJukeboxBtn.className = 'floating-jukebox-btn';
-    this.floatingJukeboxBtn.setAttribute('aria-label', 'Open Toddler Songs Jukebox');
-    this.floatingJukeboxBtn.innerHTML = `
-      <span class="btn-note-icon">🎶</span>
-      <span class="btn-text">SONGS</span>
-    `;
-    this.floatingJukeboxBtn.addEventListener('click', (e) => {
+  private createTopNavBar(): void {
+    this.topNavBar = document.createElement('div');
+    this.topNavBar.className = 'top-nav-pills';
+
+    const songsBtn = document.createElement('button');
+    songsBtn.className = 'nav-pill nav-pill-songs';
+    songsBtn.setAttribute('aria-label', 'Open Musical Songs Theater');
+    songsBtn.innerHTML = `<span>🎶</span><span>SONGS</span>`;
+    songsBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.openJukebox();
     });
-    this.appRoot.appendChild(this.floatingJukeboxBtn);
-  }
 
-  /**
-   * Floating "🎓 LEARN" button on main screen to open the 1-Year-Old Bilingual Learning Studio.
-   */
-  private createFloatingLearnButton(): void {
-    this.floatingLearnBtn = document.createElement('button');
-    this.floatingLearnBtn.className = 'floating-learn-btn';
-    this.floatingLearnBtn.setAttribute('aria-label', 'Open Little Learner Studio');
-    this.floatingLearnBtn.innerHTML = `
-      <span class="btn-note-icon">🎓</span>
-      <span class="btn-text">LEARN</span>
-    `;
-    this.floatingLearnBtn.addEventListener('click', (e) => {
+    const learnBtn = document.createElement('button');
+    learnBtn.className = 'nav-pill nav-pill-learn';
+    learnBtn.setAttribute('aria-label', 'Open Little Learner Studio');
+    learnBtn.innerHTML = `<span>🎓</span><span>LEARN</span>`;
+    learnBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.openLearningStudio();
     });
-    this.appRoot.appendChild(this.floatingLearnBtn);
-  }
 
-  /**
-   * Floating "📚" button to open the visual Storybook Home Shelf.
-   */
-  private createFloatingShelfButton(): void {
-    this.floatingShelfBtn = document.createElement('button');
-    this.floatingShelfBtn.className = 'floating-shelf-btn';
-    this.floatingShelfBtn.setAttribute('aria-label', 'Open Storybook Shelf');
-    this.floatingShelfBtn.innerHTML = `<span>📚</span>`;
-    this.floatingShelfBtn.addEventListener('click', (e) => {
+    const shelfBtn = document.createElement('button');
+    shelfBtn.className = 'nav-pill nav-pill-shelf';
+    shelfBtn.setAttribute('aria-label', 'Open Storybook Games Shelf');
+    shelfBtn.innerHTML = `<span>📚</span>`;
+    shelfBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       this.engine.stopAllAudio();
       this.storybookShelf.open();
     });
-    this.appRoot.appendChild(this.floatingShelfBtn);
+
+    this.topNavBar.appendChild(songsBtn);
+    this.topNavBar.appendChild(learnBtn);
+    this.topNavBar.appendChild(shelfBtn);
+    this.appRoot.appendChild(this.topNavBar);
   }
 
   /**
-   * Opens the Songs Jukebox and stops storybook scene audio and animations.
+   * Opens the Musical Songs Theater and stops active game audio.
    */
   public openJukebox(): void {
     this.learningStudio.closeStudio();
     this.storybookShelf.close();
     this.sceneManager.deactivateActiveScene();
     this.engine.stopAllAudio();
-    this.floatingJukeboxBtn.style.display = 'none';
-    this.floatingLearnBtn.style.display = 'none';
-    this.floatingShelfBtn.style.display = 'none';
+    this.topNavBar.style.display = 'none';
     this.songsTheater.openTheater();
   }
 
   private handleExitJukebox(): void {
-    const showFloating = appPrefs.get().infantLock ? 'none' : 'flex';
-    this.floatingJukeboxBtn.style.display = showFloating;
-    this.floatingLearnBtn.style.display = showFloating;
-    this.floatingShelfBtn.style.display = showFloating;
+    this.topNavBar.style.display = appPrefs.get().infantLock ? 'none' : 'flex';
     this.engine.stopAllAudio();
     this.sceneManager.activateActiveScene();
   }
@@ -314,17 +290,12 @@ class ToddlerStorybookApp {
     this.storybookShelf.close();
     this.sceneManager.deactivateActiveScene();
     this.engine.stopAllAudio();
-    this.floatingJukeboxBtn.style.display = 'none';
-    this.floatingLearnBtn.style.display = 'none';
-    this.floatingShelfBtn.style.display = 'none';
+    this.topNavBar.style.display = 'none';
     this.learningStudio.openStudio();
   }
 
   private handleExitLearningStudio(): void {
-    const showFloating = appPrefs.get().infantLock ? 'none' : 'flex';
-    this.floatingJukeboxBtn.style.display = showFloating;
-    this.floatingLearnBtn.style.display = showFloating;
-    this.floatingShelfBtn.style.display = showFloating;
+    this.topNavBar.style.display = appPrefs.get().infantLock ? 'none' : 'flex';
     this.engine.stopAllAudio();
     this.sceneManager.activateActiveScene();
   }
@@ -349,7 +320,7 @@ class ToddlerStorybookApp {
     // Prevent multi-touch browser zooming (pinch-to-zoom) outside modal & overlays
     window.addEventListener('touchstart', (e) => {
       const target = e.target as HTMLElement | null;
-      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .floating-shelf-btn, .songs-theater-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay'))) {
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .top-nav-pills, .songs-theater-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay'))) {
         return;
       }
       if (e.touches.length > 1) {
@@ -359,7 +330,7 @@ class ToddlerStorybookApp {
 
     window.addEventListener('touchmove', (e) => {
       const target = e.target as HTMLElement | null;
-      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .songs-theater-container, .songs-hub-view, .learning-studio-container, .learning-hub-view, .storybook-shelf-overlay, .shelf-sheet'))) {
+      if (isInteractiveOverlayOpen() || (target && target.closest('.parent-modal-overlay, .guide-overlay, .parent-modal-card, .parent-controls-wrap, .top-nav-pills, .songs-theater-container, .songs-hub-view, .learning-studio-container, .learning-hub-view, .storybook-shelf-overlay, .shelf-sheet'))) {
         return;
       }
       e.preventDefault();
@@ -368,7 +339,7 @@ class ToddlerStorybookApp {
     // Global multi-touch burst reaction: Any tap or slap anywhere spawns sparkles!
     window.addEventListener('pointerdown', (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .floating-jukebox-btn, .floating-learn-btn, .floating-shelf-btn, .songs-theater-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay')) {
+      if (target && target.closest('.parent-modal-card, .parent-modal-overlay, .parent-controls-wrap, .top-nav-pills, .songs-theater-container, .learning-studio-container, .storybook-shelf-overlay, .sleepy-byebye-overlay')) {
         return;
       }
       // Sparkle if tapping empty scene background
