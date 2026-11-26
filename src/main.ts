@@ -23,6 +23,12 @@ import {
   SurpriseEggsGame,
   PeekabooBoxesGame,
 } from './games/GameScenes';
+import {
+  BalloonFruitGame,
+  BabyPhoneGame,
+  DrumPianoRoomGame,
+  FireworksShowGame,
+} from './games/ArcadeGames';
 import { SongsTheater } from './songs/SongsTheater';
 import { LearningStudio } from './components/LearningStudio';
 import { StorybookShelf } from './components/StorybookShelf';
@@ -44,6 +50,10 @@ class ToddlerStorybookApp {
   private bubblePopScene: MagicBubblePopGame;
   private surpriseEggsScene: SurpriseEggsGame;
   private peekabooBoxesScene: PeekabooBoxesGame;
+  private balloonFruitScene: BalloonFruitGame;
+  private babyPhoneScene: BabyPhoneGame;
+  private drumPianoScene: DrumPianoRoomGame;
+  private fireworksScene: FireworksShowGame;
 
   private songsTheater: SongsTheater;
   private learningStudio: LearningStudio;
@@ -75,6 +85,10 @@ class ToddlerStorybookApp {
     this.bubblePopScene = new MagicBubblePopGame(this.appRoot, this.bursts);
     this.surpriseEggsScene = new SurpriseEggsGame(this.appRoot, this.bursts);
     this.peekabooBoxesScene = new PeekabooBoxesGame(this.appRoot, this.bursts);
+    this.balloonFruitScene = new BalloonFruitGame(this.appRoot, this.bursts);
+    this.babyPhoneScene = new BabyPhoneGame(this.appRoot, this.bursts);
+    this.drumPianoScene = new DrumPianoRoomGame(this.appRoot, this.bursts);
+    this.fireworksScene = new FireworksShowGame(this.appRoot, this.bursts);
 
     // Register with SceneManager
     this.sceneManager.registerScene(this.wheelsScene);
@@ -86,6 +100,10 @@ class ToddlerStorybookApp {
     this.sceneManager.registerScene(this.bubblePopScene);
     this.sceneManager.registerScene(this.surpriseEggsScene);
     this.sceneManager.registerScene(this.peekabooBoxesScene);
+    this.sceneManager.registerScene(this.balloonFruitScene);
+    this.sceneManager.registerScene(this.babyPhoneScene);
+    this.sceneManager.registerScene(this.drumPianoScene);
+    this.sceneManager.registerScene(this.fireworksScene);
 
     // 4. Brand-New Interactive Songs Theater & Little Learner Studio (EN / FR)
     this.songsTheater = new SongsTheater(this.appRoot, this.bursts, () => {

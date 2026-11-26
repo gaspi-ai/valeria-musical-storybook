@@ -1505,4 +1505,191 @@ export class AudioEngine {
   public getMasterVolume(): number {
     return this.masterGain ? this.masterGain.gain.value : appPrefs.get().masterVolume;
   }
+
+  /**
+   * Baby Toy Phone: Sweet musical DTMF/bell keypad tone (0–9).
+   */
+  public playPhoneTone(digit: number): void {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.sfxGain) return;
+    const freqs = [523.25, 587.33, 659.25, 698.46, 783.99, 880.0, 987.77, 1046.5, 1174.66, 1318.51];
+    const f = freqs[Math.abs(digit) % freqs.length];
+    const now = this.ctx.currentTime;
+
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc2.type = 'triangle';
+    osc1.frequency.setValueAtTime(f, now);
+    osc2.frequency.setValueAtTime(f * 1.5, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.32, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain);
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.24);
+    osc2.stop(now + 0.24);
+  }
+
+  /**
+   * Baby Toy Phone: Cheerful classic double "Ring-Ring!" bell.
+   */
+  public playPhoneRing(): void {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    [0, 0.34].forEach((offset) => {
+      if (!this.ctx || !this.sfxGain) return;
+      const osc = this.ctx.createOscillator();
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now + offset);
+      lfo.frequency.setValueAtTime(22, now + offset);
+      lfoGain.gain.setValueAtTime(90, now + offset);
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+
+      gain.gain.setValueAtTime(0.001, now + offset);
+      gain.gain.linearRampToValueAtTime(0.28, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.26);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now + offset);
+      lfo.start(now + offset);
+      osc.stop(now + offset + 0.28);
+      lfo.stop(now + offset + 0.28);
+    });
+  }
+
+  /**
+   * Baby Drum Kit: Punchy, warm, zero-latency studio drum hits (Kick, Snare, Bongo, Cymbal).
+   */
+  public playDrumHit(drum: 'kick' | 'snare' | 'bongo' | 'cymbal'): void {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+
+    if (drum === 'kick') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(48, now + 0.14);
+      gain.gain.setValueAtTime(0.9, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.34);
+    } else if (drum === 'bongo') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(340 + Math.random() * 40, now);
+      osc.frequency.exponentialRampToValueAtTime(185, now + 0.12);
+      gain.gain.setValueAtTime(0.75, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    } else if (drum === 'snare') {
+      // Crisp snare body + filtered noise snap
+      const osc = this.ctx.createOscillator();
+      const oscGain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(210, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
+      oscGain.gain.setValueAtTime(0.45, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      osc.connect(oscGain);
+      oscGain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.17);
+
+      const len = Math.floor(this.ctx.sampleRate * 0.18);
+      const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(1100, now);
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(0.55, now);
+      nGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(this.sfxGain);
+      noise.start(now);
+    } else {
+      // Shimmering crash cymbal
+      const len = Math.floor(this.ctx.sampleRate * 0.55);
+      const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(5200, now);
+      filter.Q.setValueAtTime(1.4, now);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+      noise.start(now);
+    }
+  }
+
+  /**
+   * Fireworks Show: Warm toddler-friendly pop + sparkling chime burst.
+   */
+  public playFireworkBurst(): void {
+    if (!this.ctx || this.ctx.state !== 'running' || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+
+    // Soft low boom
+    const osc = this.ctx.createOscillator();
+    const oGain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(42, now + 0.22);
+    oGain.gain.setValueAtTime(0.55, now);
+    oGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    osc.connect(oGain);
+    oGain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.3);
+
+    // Gentle filtered sparkle crackle
+    const len = Math.floor(this.ctx.sampleRate * 0.32);
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.35));
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(2400, now);
+    bp.Q.setValueAtTime(1.2, now);
+    const nGain = this.ctx.createGain();
+    nGain.gain.setValueAtTime(0.35, now);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    noise.connect(bp);
+    bp.connect(nGain);
+    nGain.connect(this.sfxGain);
+    noise.start(now);
+  }
 }

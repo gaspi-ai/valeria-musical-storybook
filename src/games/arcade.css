@@ -1,0 +1,375 @@
+/* ==========================================================================
+   Arcade Games CSS (Balloon & Fruit Smash, Baby Toy Phone, Drum/Piano, Fireworks)
+   iPhone-first (100dvh), chunky palm-tolerant touch targets
+   ========================================================================== */
+
+.arc-mode-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  z-index: 10;
+}
+
+.arc-mode-btn {
+  border: 3px solid #FFFFFF;
+  background: rgba(255, 255, 255, 0.85);
+  color: #1D3557;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.88rem;
+  padding: 9px 16px;
+  border-radius: 999px;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.arc-mode-btn.active {
+  background: #4361EE;
+  color: #FFFFFF;
+}
+
+.arc-banner {
+  background: rgba(255, 255, 255, 0.94);
+  color: #1D3557;
+  font-size: 1.15rem;
+  font-weight: 900;
+  padding: 7px 18px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(29, 53, 87, 0.12);
+  margin-bottom: 10px;
+  z-index: 10;
+}
+
+/* --------------------------------------------------------------------------
+   1. BALLOON POP & FRUIT SMASH
+   -------------------------------------------------------------------------- */
+.game-balloon_fruit {
+  background: linear-gradient(180deg, #8ECAE6 0%, #CAF0F8 60%, #FFF3B0 100%);
+}
+
+.bf-playfield {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.arc-balloon {
+  position: absolute;
+  bottom: -95px;
+  width: 84px;
+  height: 102px;
+  border-radius: 50% 50% 48% 48%;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.7) 0%, var(--bal-color) 65%);
+  box-shadow: 0 10px 20px rgba(29, 53, 87, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: balloonRise 8.2s linear forwards;
+  transition: transform 0.14s ease, opacity 0.14s ease;
+}
+
+.arc-balloon.popped {
+  transform: scale(1.45);
+  opacity: 0;
+}
+
+.bal-face {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.bal-string {
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  width: 3px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+@keyframes balloonRise {
+  0% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-55vh) translateX(16px); }
+  100% { transform: translateY(-110vh) translateX(-10px); }
+}
+
+.fruit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+}
+
+@media (min-width: 600px) {
+  .fruit-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.fruit-smash-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border: 4px solid var(--fruit-color);
+  border-radius: 26px;
+  padding: 14px 10px;
+  box-shadow: 0 8px 18px rgba(29, 53, 87, 0.12);
+  cursor: pointer;
+}
+
+.fruit-emoji { font-size: 3.4rem; line-height: 1; }
+.fruit-name { font-size: 0.95rem; font-weight: 900; color: #1D3557; margin-top: 6px; }
+
+.fruit-squish {
+  animation: fruitSquishAnim 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fruitSquishAnim {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.25, 0.72); }
+  70% { transform: scale(0.92, 1.12); }
+  100% { transform: scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   2. BABY TOY PHONE
+   -------------------------------------------------------------------------- */
+.game-baby_phone {
+  background: linear-gradient(165deg, #DBEAFE 0%, #EDE9FE 55%, #FCE7F3 100%);
+}
+
+.baby-phone-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(94vw, 370px);
+  background: linear-gradient(160deg, #FFDE59 0%, #FFBD00 100%);
+  border: 6px solid #FFFFFF;
+  border-radius: 36px;
+  padding: 14px;
+  box-shadow: 0 18px 40px rgba(29, 53, 87, 0.22);
+}
+
+.phone-screen {
+  background: #1D3557;
+  border: 4px solid #FFFFFF;
+  border-radius: 22px;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  color: #FFFFFF;
+  overflow: hidden;
+}
+
+.phone-screen-idle,
+.phone-screen-calling,
+.phone-screen-active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.phone-idle-emoji,
+.phone-ring-icon { font-size: 2.5rem; }
+.phone-dial-readout { font-size: 2.3rem; font-weight: 900; letter-spacing: 4px; color: #FFE066; }
+.phone-caller-emoji { font-size: 3rem; }
+.phone-caller-svg { width: 78px; height: 78px; }
+.phone-call-text { font-size: 1.2rem; font-weight: 900; color: #FFE066; }
+
+.phone-contacts-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.phone-contact-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  border-radius: 14px;
+  border: 2.5px solid #FFFFFF;
+  background: #FFFFFF;
+  font-size: 1.45rem;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.phone-contact-btn span {
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #1D3557;
+  margin-top: 2px;
+}
+
+.contact-mama { background: #FFE4EC; }
+.contact-dada { background: #E0F2FE; }
+
+.phone-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.phone-key-btn {
+  height: 58px;
+  border-radius: 18px;
+  border: 3.5px solid #FFFFFF;
+  background: var(--key-color, #4361EE);
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-size: 1.65rem;
+  font-weight: 900;
+  box-shadow: 0 5px 0 rgba(29, 53, 87, 0.25);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s ease;
+}
+
+.phone-key-btn:active {
+  transform: translateY(3px) scale(0.95);
+}
+
+.phone-call-btn { background: #10B981; }
+.phone-end-btn { background: #EF4444; }
+
+/* --------------------------------------------------------------------------
+   3. BABY DRUM KIT & PIANO ROOM
+   -------------------------------------------------------------------------- */
+.game-drum_piano {
+  background: linear-gradient(160deg, #FFF7ED 0%, #FEF3C7 55%, #E0E7FF 100%);
+}
+
+.music-room-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.drum-kit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: min(92vw, 440px);
+}
+
+.drum-pad {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 7px solid #FFFFFF;
+  background: radial-gradient(circle at 35% 30%, #FFFFFF55 0%, var(--pad-bg) 70%);
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 14px 28px rgba(29, 53, 87, 0.22);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.drum-emoji { font-size: 3.1rem; line-height: 1; }
+.drum-pad strong { font-size: 0.95rem; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+.baby-piano-frame {
+  width: min(96vw, 560px);
+  background: #1D3557;
+  border: 6px solid #FFFFFF;
+  border-radius: 30px;
+  padding: 14px 10px 12px;
+  box-shadow: 0 16px 36px rgba(29, 53, 87, 0.26);
+}
+
+.piano-top-speaker {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+.baby-piano-keys {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  height: min(40dvh, 250px);
+}
+
+.baby-piano-key {
+  border-radius: 12px 12px 20px 20px;
+  border: 3px solid #FFFFFF;
+  background: var(--key-color);
+  color: #FFFFFF;
+  font-family: var(--font-storybook);
+  font-weight: 900;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 14px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.08s ease;
+}
+
+.baby-piano-key.pressed {
+  transform: translateY(5px);
+  filter: brightness(1.15);
+}
+
+/* --------------------------------------------------------------------------
+   4. MULTI-TOUCH FIREWORKS SHOW
+   -------------------------------------------------------------------------- */
+.game-fireworks_show {
+  background: radial-gradient(circle at 50% 25%, #1E1B4B 0%, #0B0826 100%);
+}
+
+.fireworks-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  border-radius: 26px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+}
+
+.fireworks-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.fireworks-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: #FFE066;
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-align: center;
+  padding: 20px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  transition: opacity 0.5s ease;
+}

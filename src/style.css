@@ -9,6 +9,7 @@
 @import './learning.css';
 @import './master.css';
 @import './games/games.css';
+@import './games/arcade.css';
 
 :root {
   --color-bus-yellow: #FFBD00;

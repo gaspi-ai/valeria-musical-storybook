@@ -177,8 +177,24 @@ export class ParentGate {
 
           <!-- Scene Selector Carousel / Grid -->
           <div class="parent-section">
-            <label class="parent-label">Choose Musical Game (9 Rebuilt Games):</label>
+            <label class="parent-label">Choose Musical Game (13 Games):</label>
             <div class="parent-btn-group scene-grid-6">
+              <button class="scene-select-btn ${this.currentScene === 'baby_phone' ? 'active' : ''}" data-scene="baby_phone">
+                <span class="scene-btn-icon">📱</span>
+                <span class="scene-btn-title">Baby Toy Phone</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'drum_piano' ? 'active' : ''}" data-scene="drum_piano">
+                <span class="scene-btn-icon">🥁</span>
+                <span class="scene-btn-title">Drums & Baby Piano</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'balloon_fruit' ? 'active' : ''}" data-scene="balloon_fruit">
+                <span class="scene-btn-icon">🎈</span>
+                <span class="scene-btn-title">Balloons & Fruit Smash</span>
+              </button>
+              <button class="scene-select-btn ${this.currentScene === 'fireworks_show' ? 'active' : ''}" data-scene="fireworks_show">
+                <span class="scene-btn-icon">🎆</span>
+                <span class="scene-btn-title">Fireworks Show</span>
+              </button>
               <button class="scene-select-btn ${this.currentScene === 'wheels' ? 'active' : ''}" data-scene="wheels">
                 <span class="scene-btn-icon">🚌</span>
                 <span class="scene-btn-title">Wheels on the Bus</span>

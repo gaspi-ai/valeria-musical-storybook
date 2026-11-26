@@ -15,6 +15,8 @@ export interface VoiceSlotMeta {
 }
 
 export const PARENT_VOICE_SLOTS: VoiceSlotMeta[] = [
+  { key: 'mama', labelEn: 'Call Mama! (Baby Phone)', labelFr: 'Appeler Maman !', emoji: '👩' },
+  { key: 'dada', labelEn: 'Call Dada! (Baby Phone)', labelFr: 'Appeler Papa !', emoji: '👨' },
   { key: 'great_job', labelEn: 'Yay! Good job!', labelFr: 'Bravo ! Super !', emoji: '🌟' },
   { key: 'ball', labelEn: 'Ball', labelFr: 'Balle', emoji: '⚽' },
   { key: 'apple', labelEn: 'Apple', labelFr: 'Pomme', emoji: '🍎' },
