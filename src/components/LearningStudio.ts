@@ -273,8 +273,8 @@ export class LearningStudio {
       pill.addEventListener('click', () => {
         const lang = pill.getAttribute('data-lang') === 'fr' ? 'fr' : 'en';
         appPrefs.update({ language: lang });
-        this.engine.playSound('chime.mp3', { volume: 0.65 });
-        this.speech.speak(lang === 'fr' ? 'Français !' : 'English!', lang);
+        this.engine.playSound('chime.mp3', { volume: 0.6 });
+        this.speech.playStudioVoice('ui_lang', lang === 'fr' ? 'Français !' : 'English!', { lang });
       });
     });
 
@@ -293,8 +293,8 @@ export class LearningStudio {
       e.stopPropagation();
       const next: AppLanguage = this.lang === 'en' ? 'fr' : 'en';
       appPrefs.update({ language: next });
-      this.engine.playSound('chime.mp3', { volume: 0.65 });
-      this.speech.speak(next === 'fr' ? 'Français !' : 'English!', next);
+      this.engine.playSound('chime.mp3', { volume: 0.6 });
+      this.speech.playStudioVoice('ui_lang', next === 'fr' ? 'Français !' : 'English!', { lang: next });
     });
 
     // Discreet Exit (2-Second Hold OR Double-Tap)
@@ -550,12 +550,15 @@ export class LearningStudio {
           void cardEl.offsetWidth;
           cardEl.classList.add('pop-bounce');
         }
-        this.engine.playSound(word.sfx, { volume: 0.8 });
+        this.engine.playSound(word.sfx, { volume: 0.75 });
         this.bursts.spawnBurst(x, y, 14, word.color);
         this.speech.recordInteraction('first_words', t(word.label, this.lang));
-        this.safeTimeout(() => {
-          this.speech.speak(slow ? t(word.label, this.lang) : t(word.spoken, this.lang), this.lang, slow ? 0.68 : 0.85);
-        }, 140);
+        this.speech.playStudioVoice(`fw_${word.id}`, t(word.spoken, this.lang), {
+          lang: this.lang,
+          slow,
+          delayMs: 140,
+          parentKey: word.id === 'mama' ? 'call_mama' : word.id === 'dada' ? 'call_dada' : word.id,
+        });
       };
 
       this.stageContentEl.querySelector('#fw-focus-card')?.addEventListener('pointerdown', (e) => {
@@ -588,7 +591,10 @@ export class LearningStudio {
       const target = pair[Math.random() > 0.5 ? 0 : 1];
       this.firstWordsTargetId = target.id;
       this.stageBannerEl.textContent = `🔍 ${t(target.findPrompt, this.lang)}`;
-      this.safeTimeout(() => this.speech.speak(t(target.findPrompt, this.lang)), 220);
+      this.speech.playStudioVoice(`fw_find_${target.id}`, t(target.findPrompt, this.lang), {
+        lang: this.lang,
+        delayMs: 220,
+      });
     } else {
       this.stageBannerEl.textContent = `🍎 ${t(this.getLessonMeta('first_words').title, this.lang)}`;
     }
@@ -643,25 +649,36 @@ export class LearningStudio {
         if (this.firstWordsMode === 'find') {
           if (word.id === this.firstWordsTargetId) {
             this.stageBannerEl.textContent = `🌟 ${t(UI_STRINGS.yay, this.lang)}`;
-            this.speech.speakForKey('great_job', `${t(word.label, this.lang)}! ${t(UI_STRINGS.yay, this.lang)}`);
             this.engine.playSound('fanfare.mp3', { volume: 0.65 });
+            this.speech.playStudioVoice('ui_yay', t(UI_STRINGS.yay, this.lang), {
+              lang: this.lang,
+              delayMs: 180,
+              parentKey: 'great_job',
+            });
             if (!appPrefs.get().bedtimeMode) {
               confetti({ particleCount: 40, spread: 65, origin: { y: 0.65 } });
             }
             this.safeTimeout(() => {
               this.firstWordsIdx = (this.firstWordsIdx + 1) % Math.ceil(safeWords.length / 2);
               this.renderFirstWordsLesson();
-            }, 1800);
+            }, 1900);
           } else {
             const targetWord = pair.find((w) => w.id === this.firstWordsTargetId)!;
-            this.speech.speak(`${t(word.label, this.lang)}! ${t(targetWord.findPrompt, this.lang)}`);
+            this.speech.playStudioVoice(`fw_find_${targetWord.id}`, t(targetWord.findPrompt, this.lang), {
+              lang: this.lang,
+              delayMs: 180,
+            });
             const targetEl = this.stageContentEl.querySelector(`[data-word-id="${this.firstWordsTargetId}"]`);
             targetEl?.classList.add('gentle-hint-glow');
             this.safeTimeout(() => targetEl?.classList.remove('gentle-hint-glow'), 1400);
           }
         } else {
           this.stageBannerEl.textContent = `✨ ${t(word.label, this.lang)}!`;
-          this.speech.speakForKey(word.id, t(word.spoken, this.lang));
+          this.speech.playStudioVoice(`fw_${word.id}`, t(word.spoken, this.lang), {
+            lang: this.lang,
+            delayMs: 120,
+            parentKey: word.id === 'mama' ? 'call_mama' : word.id === 'dada' ? 'call_dada' : word.id,
+          });
         }
       });
     });
@@ -729,12 +746,14 @@ export class LearningStudio {
         this.bursts.spawnBurst(pe.clientX, pe.clientY, 16, animal.color);
         this.speech.recordInteraction('animal_friends', t(animal.label, this.lang));
 
-        // 1. Play real acoustic animal sound immediately
-        this.engine.playSound(animal.sfx, { volume: 0.9 });
-        // 2. Follow with warm spoken naming (or Mom/Dad's recorded voice!) for imitation
-        this.safeTimeout(() => {
-          this.speech.speakForKey(animal.id, t(animal.spoken, this.lang));
-        }, 550);
+        // 1. Play real acoustic animal sound immediately (exclusive channel so animals never clash!)
+        this.engine.playSound(animal.sfx, { volume: 0.88 });
+        // 2. Follow with studio human voice (or Mom/Dad's recorded voice) via cancellable delay
+        this.speech.playStudioVoice(`animal_${animal.id}`, t(animal.spoken, this.lang), {
+          lang: this.lang,
+          delayMs: 520,
+          parentKey: animal.id,
+        });
       });
     });
   }
@@ -777,7 +796,10 @@ export class LearningStudio {
 
         this.engine.playGlockNote(item.note, { volume: 0.85 });
         this.bursts.spawnStarGlow(pe.clientX, pe.clientY, 16, item.fill);
-        this.speech.speak(t(item.spoken, this.lang));
+        this.speech.playStudioVoice(`shape_${item.id}`, t(item.spoken, this.lang), {
+          lang: this.lang,
+          delayMs: 110,
+        });
         this.speech.recordInteraction('colors_shapes', t(item.label, this.lang));
       });
     });
@@ -816,9 +838,13 @@ export class LearningStudio {
       }
 
       this.stageBannerEl.textContent = `🐻 ${t(part.label, this.lang)}!`;
-      this.engine.playSound(part.sfx, { volume: 0.85 });
+      this.engine.playSound(part.sfx, { volume: 0.8 });
       this.bursts.spawnBurst(x, y, 14, part.color);
-      this.speech.speakForKey(partId, t(part.spoken, this.lang));
+      this.speech.playStudioVoice(`body_${partId}`, t(part.spoken, this.lang), {
+        lang: this.lang,
+        delayMs: 140,
+        parentKey: partId,
+      });
       this.speech.recordInteraction('body_parts', t(part.label, this.lang));
     };
 
@@ -880,7 +906,10 @@ export class LearningStudio {
           // Gentle replay of that number
           const n = parseInt(btn.getAttribute('data-num') || '1', 10);
           this.engine.playInstrumentNote('marimba', scale[n - 1] || 'C4', { volume: 0.85 });
-          this.speech.speak(t(COUNTING_WORDS[n], this.lang));
+          this.speech.playStudioVoice(`num_${n}`, t(COUNTING_WORDS[n], this.lang), {
+            lang: this.lang,
+            delayMs: 80,
+          });
           this.bursts.spawnBurst(pe.clientX, pe.clientY, 10, theme.color);
           return;
         }
@@ -904,7 +933,10 @@ export class LearningStudio {
         this.stageBannerEl.textContent = `${theme.emoji} ${t(COUNTING_WORDS[count], this.lang)}`;
         this.engine.playInstrumentNote('marimba', scale[count - 1] || 'A4', { volume: 0.9 });
         this.bursts.spawnBurst(pe.clientX, pe.clientY, 14, theme.color);
-        this.speech.speak(t(COUNTING_WORDS[count], this.lang));
+        this.speech.playStudioVoice(`num_${count}`, t(COUNTING_WORDS[count], this.lang), {
+          lang: this.lang,
+          delayMs: 80,
+        });
         this.speech.recordInteraction('counting_1_5', `${count}`);
 
         if (count >= 5) {
@@ -951,9 +983,12 @@ export class LearningStudio {
 
     const playCurrentEmotion = (x: number, y: number) => {
       const em = EMOTIONS[this.emotionIdx % EMOTIONS.length];
-      this.engine.playSound(em.sfx, { volume: 0.85 });
+      this.engine.playSound(em.sfx, { volume: 0.8 });
       this.bursts.spawnBurst(x, y, 16, '#FFD166');
-      this.speech.speak(t(em.spoken, this.lang));
+      this.speech.playStudioVoice(`emo_${em.id}`, t(em.spoken, this.lang), {
+        lang: this.lang,
+        delayMs: 180,
+      });
       this.speech.recordInteraction('emotions', t(em.label, this.lang));
     };
 

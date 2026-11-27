@@ -6,7 +6,7 @@
  *   visited scenes work reliably offline (flights, car rides, iPhone Home Screen).
  */
 
-const CACHE_NAME = 'valeria-storybook-v10';
+const CACHE_NAME = 'valeria-storybook-v11';
 
 const APP_SHELL = [
   './',

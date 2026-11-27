@@ -153,7 +153,7 @@ export class ParentGate {
               <span style="font-size: 2rem;">🎓</span>
               <div>
                 <h3 style="font-size: 1.05rem; font-weight: 800; margin: 0; color: #FFFFFF;">Little Learner Studio (EN / FR)</h3>
-                <p style="font-size: 0.8rem; margin: 2px 0 0 0; color: #E0FBFC;">6 Gentle Lessons for 1-Year-Olds: Words, Animals, Shapes, Body, 1–5</p>
+                <p style="font-size: 0.8rem; margin: 2px 0 0 0; color: #E0FBFC;">12 Gentle Lessons with Real Human Voices: Words, Barn, Shapes, Speech Mirror</p>
               </div>
             </div>
             <button id="btn-open-learning" style="background: #FFFFFF; color: #0F766E; border: none; font-weight: 800; font-size: 0.85rem; padding: 10px 16px; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;">
@@ -280,7 +280,7 @@ export class ParentGate {
 
           <!-- Language Selector (English / Français) -->
           <div class="parent-section">
-            <label class="parent-label">Voice & Learning Language:</label>
+            <label class="parent-label">Studio Human Voice & Learning Language:</label>
             <div class="parent-btn-group">
               <button class="lang-select-btn ${this.currentLanguage === 'en' ? 'active' : ''}" data-lang="en">
                 🇬🇧 English
@@ -289,15 +289,32 @@ export class ParentGate {
                 🇫🇷 Français
               </button>
             </div>
+            <button class="how-to-lock-guide-btn" id="btn-test-studio-voice" style="margin-top: 8px; width: 100%;">
+              🗣️ Test Studio Human Voice
+            </button>
           </div>
 
-          <!-- Volume Controls -->
+          <!-- Volume Controls (Separate Mixers: Master, Music, Voices/SFX) -->
           <div class="parent-section parent-slider-row">
             <label class="parent-label">Master Volume:</label>
             <div class="volume-slider-wrap">
               <span>🔈</span>
-              <input type="range" class="volume-slider" min="0" max="1" step="0.05" value="${appPrefs.get().masterVolume}" />
+              <input type="range" class="volume-slider" id="slider-master-vol" min="0" max="1" step="0.05" value="${appPrefs.get().masterVolume}" />
               <span>🔊</span>
+            </div>
+
+            <label class="parent-label" style="margin-top: 10px;">🎵 Background Music Volume (Soft & Auto-Ducked):</label>
+            <div class="volume-slider-wrap">
+              <span>🔇</span>
+              <input type="range" class="volume-slider" id="slider-music-vol" min="0" max="1" step="0.05" value="${appPrefs.get().musicVolume}" />
+              <span>🎶</span>
+            </div>
+
+            <label class="parent-label" style="margin-top: 10px;">🗣️ Voices & Sound Effects Volume:</label>
+            <div class="volume-slider-wrap">
+              <span>🔈</span>
+              <input type="range" class="volume-slider" id="slider-sfx-vol" min="0" max="1" step="0.05" value="${appPrefs.get().sfxVolume}" />
+              <span>✨</span>
             </div>
           </div>
 
@@ -606,16 +623,37 @@ export class ParentGate {
         this.currentLanguage = lang;
         appPrefs.update({ language: lang });
         this.callbacks.onLanguageChange?.(lang);
-        this.engine.playSound('chime.mp3', { volume: 0.65 });
+        SpeechHelper.getInstance().playStudioVoice('ui_lang', lang === 'fr' ? 'Français !' : 'English!', { lang });
       });
     });
 
-    // Volume Slider
-    const volSlider = this.modalOverlay.querySelector('.volume-slider') as HTMLInputElement;
-    volSlider.addEventListener('input', () => {
+    // Test Studio Human Voice button
+    const testVoiceBtn = this.modalOverlay.querySelector('#btn-test-studio-voice') as HTMLElement;
+    testVoiceBtn?.addEventListener('click', () => {
+      const lang = appPrefs.get().language;
+      SpeechHelper.getInstance().playStudioVoice('ui_lang', lang === 'fr' ? 'Français !' : 'English!', { lang });
+    });
+
+    // Volume Sliders (Master, Music, SFX/Voices)
+    const volSlider = this.modalOverlay.querySelector('#slider-master-vol') as HTMLInputElement;
+    volSlider?.addEventListener('input', () => {
       const vol = parseFloat(volSlider.value);
       appPrefs.update({ masterVolume: vol });
       this.engine.setMasterVolume(vol);
+    });
+
+    const musicSlider = this.modalOverlay.querySelector('#slider-music-vol') as HTMLInputElement;
+    musicSlider?.addEventListener('input', () => {
+      const vol = parseFloat(musicSlider.value);
+      appPrefs.update({ musicVolume: vol });
+      this.engine.setMusicVolume(vol);
+    });
+
+    const sfxSlider = this.modalOverlay.querySelector('#slider-sfx-vol') as HTMLInputElement;
+    sfxSlider?.addEventListener('input', () => {
+      const vol = parseFloat(sfxSlider.value);
+      appPrefs.update({ sfxVolume: vol });
+      this.engine.setSfxVolume(vol);
     });
 
     // Fullscreen Toggle

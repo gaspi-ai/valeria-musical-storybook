@@ -174,6 +174,8 @@ class ToddlerStorybookApp {
   private async startApp(): Promise<void> {
     const prefs = appPrefs.get();
     this.engine.setMasterVolume(prefs.masterVolume);
+    this.engine.setMusicVolume(prefs.musicVolume);
+    this.engine.setSfxVolume(prefs.sfxVolume);
     const validIds = new Set(this.sceneManager.getScenes().map(s => s.id));
     const initialScene = validIds.has(prefs.lastScene) ? prefs.lastScene : 'wheels';
     await this.sceneManager.switchScene(initialScene);

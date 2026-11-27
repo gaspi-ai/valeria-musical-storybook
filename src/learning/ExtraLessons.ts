@@ -119,8 +119,12 @@ export function renderPeekabooBarn(ctx: ExtraLessonContext, st: ExtraLessonState
     if (!st.barnOpen) {
       st.barnOpen = true;
       ctx.engine.playSound('woodblock.mp3', { volume: 0.7 });
-      ctx.safeTimeout(() => ctx.engine.playSound(animal.sfx, { volume: 0.95 }), 120);
-      ctx.safeTimeout(() => ctx.speech.speak(t(animal.revealSpeech, ctx.lang)), 360);
+      ctx.safeTimeout(() => ctx.engine.playSound(animal.sfx, { volume: 0.9 }), 100);
+      ctx.speech.playStudioVoice(`barn_${animal.id}`, t(animal.revealSpeech, ctx.lang), {
+        lang: ctx.lang,
+        delayMs: 420,
+        parentKey: animal.id,
+      });
       ctx.speech.recordInteraction('peekaboo_barn', t(animal.label, ctx.lang));
       ctx.bursts.spawnBurst(clientX, clientY, 18, '#FFD166');
       confetti({ particleCount: 28, spread: 60, origin: { y: 0.55 } });
@@ -217,7 +221,10 @@ export function renderShapeSorter(ctx: ExtraLessonContext, st: ExtraLessonState)
       st.sorterMatched.add(item.id);
       ctx.engine.playSound('woodblock.mp3', { volume: 0.85 });
       ctx.safeTimeout(() => ctx.engine.playSound(`glock_${item.note}.mp3`, { volume: 0.85 }), 90);
-      ctx.speech.speak(t(item.spoken, ctx.lang));
+      ctx.speech.playStudioVoice(`shape_${item.id}`, t(item.spoken, ctx.lang), {
+        lang: ctx.lang,
+        delayMs: 140,
+      });
       ctx.speech.recordInteraction('shape_sorter', t(item.label, ctx.lang));
       ctx.bursts.spawnBurst(pe.clientX, pe.clientY, 16, item.fill);
 
@@ -310,7 +317,7 @@ export function renderAbcPhonics(ctx: ExtraLessonContext, st: ExtraLessonState):
     const phrase =
       ctx.lang === 'fr' ? `${item.letter} ! Comme ${w} !` : `${item.letter}! ${item.letter} is for ${w}!`;
     ctx.engine.playSound(`glock_${item.note}.mp3`, { volume: 0.85 });
-    ctx.speech.speak(phrase);
+    ctx.speech.playStudioVoice(`abc_${item.letter}`, phrase, { lang: ctx.lang, delayMs: 120 });
     ctx.speech.recordInteraction('abc_phonics', `${item.letter}-${w}`);
     ctx.bursts.spawnBurst(x, y, 14, item.color);
   };
@@ -392,8 +399,11 @@ export function renderVehiclesGo(ctx: ExtraLessonContext): void {
       void (card as HTMLElement).offsetWidth;
       card.classList.add('squash-bounce');
 
-      ctx.engine.playSound(v.sfx, { volume: 0.9 });
-      ctx.safeTimeout(() => ctx.speech.speak(t(v.spoken, ctx.lang)), 320);
+      ctx.engine.playSound(v.sfx, { volume: 0.85 });
+      ctx.speech.playStudioVoice(`veh_${v.id}`, t(v.spoken, ctx.lang), {
+        lang: ctx.lang,
+        delayMs: 360,
+      });
       ctx.speech.recordInteraction('vehicles_go', t(v.label, ctx.lang));
       ctx.bursts.spawnBurst(pe.clientX, pe.clientY, 16, v.color);
     });
@@ -447,7 +457,10 @@ export function renderOppositesPlay(ctx: ExtraLessonContext, st: ExtraLessonStat
       card.classList.add('opp-animate');
 
       ctx.engine.playSound(side.sfx, { volume: 0.85 });
-      ctx.safeTimeout(() => ctx.speech.speak(t(side.spoken, ctx.lang)), 220);
+      ctx.speech.playStudioVoice(`opp_${side.id}`, t(side.spoken, ctx.lang), {
+        lang: ctx.lang,
+        delayMs: 260,
+      });
       ctx.speech.recordInteraction('opposites_play', t(side.label, ctx.lang));
       ctx.bursts.spawnBurst(pe.clientX, pe.clientY, 16, side.color);
     });
@@ -547,10 +560,13 @@ export function renderMouthGym(ctx: ExtraLessonContext, st: ExtraLessonState): v
       void face.offsetWidth;
       face.classList.add('is-speaking');
     }
-    ctx.engine.playSound(item.sfx, { volume: 0.7 });
-    ctx.safeTimeout(() => {
-      ctx.speech.speak(t(item.spoken, ctx.lang), ctx.lang, slow ? 0.66 : 0.82);
-    }, 120);
+    ctx.engine.playSound(item.sfx, { volume: 0.65 });
+    ctx.speech.playStudioVoice(`mouth_${item.id}`, t(item.spoken, ctx.lang), {
+      lang: ctx.lang,
+      slow,
+      delayMs: 120,
+      parentKey: item.id === 'mama' ? 'call_mama' : item.id === 'dada' ? 'call_dada' : undefined,
+    });
     ctx.speech.recordInteraction('mouth_gym', t(item.syllable, ctx.lang));
     ctx.bursts.spawnBurst(x, y, 14, item.color);
   };
@@ -570,8 +586,12 @@ export function renderMouthGym(ctx: ExtraLessonContext, st: ExtraLessonState): v
   ctx.stageContentEl.querySelector('#mouth-cheer-btn')?.addEventListener('pointerdown', (e) => {
     const pe = e as PointerEvent;
     e.stopPropagation();
-    ctx.engine.playSound('fanfare.mp3', { volume: 0.8 });
-    ctx.speech.speak(t(UI_STRINGS.yay, ctx.lang));
+    ctx.engine.playSound('fanfare.mp3', { volume: 0.75 });
+    ctx.speech.playStudioVoice('ui_yay', t(UI_STRINGS.yay, ctx.lang), {
+      lang: ctx.lang,
+      delayMs: 240,
+      parentKey: 'great_job',
+    });
     ctx.speech.recordInteraction('mouth_gym', `cheer-${item.id}`);
     ctx.bursts.spawnBurst(pe.clientX, pe.clientY, 20, '#FFD166');
     confetti({ particleCount: 38, spread: 70, origin: { y: 0.6 } });

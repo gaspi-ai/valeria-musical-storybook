@@ -51,12 +51,23 @@ export class AudioEngine {
   private compressor: DynamicsCompressorNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
+  private voiceGain: GainNode | null = null;
 
-  // Active Voice Polyphony Stealing (Cap at 8 voices max) & per-SFX debounce
+  // Active Voice Polyphony Stealing (Cap at 4 voices max) & per-SFX debounce
   private activeVoices: ActiveVoice[] = [];
-  private readonly MAX_POLYPHONY = 8;
+  private featuredSfxVoice: ActiveVoice | null = null;
+  private humanVoiceActive: ActiveVoice | null = null;
+  private humanVoiceReqId: number = 0;
+  private readonly MAX_POLYPHONY = 4;
   private lastSfxTime: Map<string, number> = new Map();
   private duckTimeout: number | null = null;
+
+  // Prominent non-musical SFX that should never clash with each other (exclusive channel)
+  private static readonly EXCLUSIVE_SFX = new Set([
+    'cow.mp3', 'dog.mp3', 'meow.mp3', 'duck.mp3', 'sheep.mp3', 'monkey.mp3',
+    'elephant.mp3', 'cuckoo.mp3', 'horn_car.mp3', 'horn_bulb.mp3', 'door_bell.mp3',
+    'fanfare.mp3', 'laugh.mp3', 'snore.mp3', 'rain.mp3', 'splash.mp3', 'slide_whistle.mp3',
+  ]);
 
   // AudioBuffer cache memory pool (LRU capped for mobile Safari RAM safety)
   private bufferCache: Map<string, AudioBuffer> = new Map();
@@ -144,15 +155,19 @@ export class AudioEngine {
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.setValueAtTime(appPrefs.get().masterVolume, this.ctx.currentTime);
 
-        // Separate buses for SFX and Music
+        // Separate buses for SFX, Music, and Studio Human Voices
         this.sfxGain = this.ctx.createGain();
-        this.sfxGain.gain.setValueAtTime(0.9, this.ctx.currentTime);
+        this.sfxGain.gain.setValueAtTime(appPrefs.get().sfxVolume, this.ctx.currentTime);
 
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
+        this.musicGain.gain.setValueAtTime(appPrefs.get().musicVolume, this.ctx.currentTime);
+
+        this.voiceGain = this.ctx.createGain();
+        this.voiceGain.gain.setValueAtTime(appPrefs.get().sfxVolume, this.ctx.currentTime);
 
         this.sfxGain.connect(this.compressor);
         this.musicGain.connect(this.compressor);
+        this.voiceGain.connect(this.compressor);
         this.compressor.connect(this.masterGain);
         this.masterGain.connect(this.ctx.destination);
       }
@@ -422,11 +437,11 @@ export class AudioEngine {
 
     const url = this.resolveAudioPath(urlOrName);
 
-    // Gentle 90ms per-sound debounce (skipped for scheduled notes) to prevent harsh toddler slap-stacking
+    // Gentle 110ms per-sound debounce (skipped for scheduled notes) to prevent harsh toddler slap-stacking
     if (options.time === undefined && !options.loop) {
       const nowMs = performance.now();
       const prev = this.lastSfxTime.get(url) || 0;
-      if (nowMs - prev < 90) return null;
+      if (nowMs - prev < 110) return null;
       this.lastSfxTime.set(url, nowMs);
     }
 
@@ -444,7 +459,24 @@ export class AudioEngine {
       return null;
     }
 
-    // --- REAL ACOUSTIC VOICE-STEALING (8 Voices Max, 20ms Fade Out) ---
+    const cleanName = urlOrName.replace(/^.*[\\/]/, '');
+    const isExclusiveFeatured = !options.loop && AudioEngine.EXCLUSIVE_SFX.has(cleanName);
+
+    // If this is a prominent animal/horn/featured SFX, cleanly fade out the previous featured SFX so they NEVER clash
+    if (isExclusiveFeatured && this.featuredSfxVoice && this.ctx) {
+      try {
+        const now = this.ctx.currentTime;
+        this.featuredSfxVoice.gain.gain.cancelScheduledValues(now);
+        this.featuredSfxVoice.gain.gain.setValueAtTime(this.featuredSfxVoice.gain.gain.value, now);
+        this.featuredSfxVoice.gain.gain.linearRampToValueAtTime(0.0001, now + 0.025);
+        this.featuredSfxVoice.source.stop(now + 0.03);
+      } catch {}
+      const idx = this.activeVoices.indexOf(this.featuredSfxVoice);
+      if (idx !== -1) this.activeVoices.splice(idx, 1);
+      this.featuredSfxVoice = null;
+    }
+
+    // --- REAL ACOUSTIC VOICE-STEALING (4 Voices Max, 20ms Fade Out) ---
     if (this.activeVoices.length >= this.MAX_POLYPHONY) {
       const oldest = this.activeVoices.shift();
       if (oldest && this.ctx) {
@@ -500,10 +532,17 @@ export class AudioEngine {
     // Register active voice
     const voiceRecord: ActiveVoice = { source, gain: gainNode, startTime };
     this.activeVoices.push(voiceRecord);
+    if (isExclusiveFeatured) {
+      this.featuredSfxVoice = voiceRecord;
+      this.duckMusic(Math.min(1400, Math.max(550, Math.round(buffer.duration * 800))));
+    }
     source.onended = () => {
       const idx = this.activeVoices.indexOf(voiceRecord);
       if (idx !== -1) {
         this.activeVoices.splice(idx, 1);
+      }
+      if (this.featuredSfxVoice === voiceRecord) {
+        this.featuredSfxVoice = null;
       }
     };
 
@@ -1324,27 +1363,6 @@ export class AudioEngine {
   }
 
   /**
-   * Smoothly ducks background music when an interactive sound or voice plays,
-   * eliminating clashing noise and keeping every toy sound crystal clear.
-   */
-  public duckMusic(durationMs: number = 1100): void {
-    if (!this.ctx || !this.musicGain) return;
-    const now = this.ctx.currentTime;
-    this.musicGain.gain.cancelScheduledValues(now);
-    this.musicGain.gain.setTargetAtTime(0.26, now, 0.04);
-
-    if (this.duckTimeout !== null) {
-      clearTimeout(this.duckTimeout);
-    }
-    this.duckTimeout = window.setTimeout(() => {
-      this.duckTimeout = null;
-      if (this.ctx && this.musicGain) {
-        this.musicGain.gain.setTargetAtTime(0.75, this.ctx.currentTime, 0.18);
-      }
-    }, durationMs);
-  }
-
-  /**
    * Unified streaming vocal/theme song player routed through musicGain -> Compressor -> MasterGain.
    * Guarantees only ONE song ever plays at a time and Master Volume controls everything.
    */
@@ -1466,12 +1484,104 @@ export class AudioEngine {
   }
 
   /**
+   * Studio Sidechain Auto-Ducking: Smoothly lowers background music to 22% while
+   * a human voice or prominent animal/vehicle sound plays, then glides cleanly back up.
+   */
+  public duckMusic(durationMs: number = 1400): void {
+    if (!this.ctx || !this.musicGain) return;
+    const baseMusic = appPrefs.get().musicVolume;
+    const now = this.ctx.currentTime;
+    this.musicGain.gain.cancelScheduledValues(now);
+    this.musicGain.gain.setTargetAtTime(Math.max(0.03, baseMusic * 0.22), now, 0.04);
+
+    if (this.duckTimeout !== null) {
+      window.clearTimeout(this.duckTimeout);
+    }
+    this.duckTimeout = window.setTimeout(() => {
+      this.duckTimeout = null;
+      if (this.ctx && this.musicGain) {
+        const target = appPrefs.get().musicVolume;
+        this.musicGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.16);
+      }
+    }, Math.max(250, durationMs));
+  }
+
+  /**
+   * Exclusive Studio Human Voice Player:
+   * Plays a pre-recorded human neural voice MP3 through the dedicated voice bus,
+   * automatically fading out any previous voice clip and ducking background music.
+   */
+  public async playVoiceClip(
+    clipPath: string,
+    opts: { rate?: number; volume?: number } = {}
+  ): Promise<boolean> {
+    const reqId = ++this.humanVoiceReqId;
+    if (!this.ctx) await this.unlock();
+    if (!this.ctx || this.ctx.state !== 'running' || !this.voiceGain) return false;
+    if (reqId !== this.humanVoiceReqId) return false;
+
+    const buffer = await this.loadBuffer(clipPath);
+    if (!buffer || reqId !== this.humanVoiceReqId || !this.ctx || !this.voiceGain) {
+      return false;
+    }
+
+    // Fade out any currently speaking voice clip (zero overlap!)
+    this.fadeOutHumanVoice();
+
+    const rate = typeof opts.rate === 'number' ? Math.max(0.65, Math.min(1.25, opts.rate)) : 1.0;
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.setValueAtTime(rate, this.ctx.currentTime);
+
+    const gainNode = this.ctx.createGain();
+    gainNode.gain.setValueAtTime(opts.volume ?? 1.0, this.ctx.currentTime);
+
+    source.connect(gainNode);
+    gainNode.connect(this.voiceGain);
+
+    const now = this.ctx.currentTime;
+    source.start(now);
+
+    const record: ActiveVoice = { source, gain: gainNode, startTime: now };
+    this.humanVoiceActive = record;
+    this.duckMusic(Math.round((buffer.duration / rate) * 1000) + 180);
+
+    source.onended = () => {
+      if (this.humanVoiceActive === record) {
+        this.humanVoiceActive = null;
+      }
+    };
+
+    return true;
+  }
+
+  private fadeOutHumanVoice(): void {
+    if (this.humanVoiceActive && this.ctx) {
+      try {
+        const now = this.ctx.currentTime;
+        this.humanVoiceActive.gain.gain.cancelScheduledValues(now);
+        this.humanVoiceActive.gain.gain.setValueAtTime(this.humanVoiceActive.gain.gain.value, now);
+        this.humanVoiceActive.gain.gain.linearRampToValueAtTime(0.0001, now + 0.02);
+        this.humanVoiceActive.source.stop(now + 0.025);
+      } catch {}
+      this.humanVoiceActive = null;
+    }
+  }
+
+  public stopVoiceClip(): void {
+    this.humanVoiceReqId++;
+    this.fadeOutHumanVoice();
+  }
+
+  /**
    * Total Audio Isolation: Stops ALL sounds, active voices, loops, ambient streams,
    * schedulers, and active speech synthesis. Ensures zero sound overlap or noise between games.
    */
   public stopAllAudio(): void {
-    // 1. Stop all loops & schedulers
+    // 1. Stop all loops, schedulers & studio human voice
     this.stopAllLoops();
+    this.stopVoiceClip();
+    this.featuredSfxVoice = null;
 
     // 2. Stop all active polyphonic voices immediately with quick micro-fade to prevent click/pop
     if (this.ctx) {
@@ -1497,13 +1607,30 @@ export class AudioEngine {
   }
 
   /**
-   * Master Volume Control (0.0 to 1.0) — automatically softened in Calm/Bedtime Mode.
+   * Master, Music & SFX Volume Controls — automatically softened in Calm/Bedtime Mode.
    */
   public setMasterVolume(vol: number): void {
     if (this.masterGain && this.ctx) {
       const clamped = Math.max(0, Math.min(1, vol));
       const effective = appPrefs.get().bedtimeMode ? clamped * 0.55 : clamped;
       this.masterGain.gain.setTargetAtTime(effective, this.ctx.currentTime, 0.05);
+    }
+  }
+
+  public setMusicVolume(vol: number): void {
+    if (this.musicGain && this.ctx) {
+      const clamped = Math.max(0, Math.min(1, vol));
+      this.musicGain.gain.setTargetAtTime(clamped, this.ctx.currentTime, 0.05);
+    }
+  }
+
+  public setSfxVolume(vol: number): void {
+    const clamped = Math.max(0, Math.min(1, vol));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setTargetAtTime(clamped, this.ctx.currentTime, 0.05);
+    }
+    if (this.voiceGain && this.ctx) {
+      this.voiceGain.gain.setTargetAtTime(clamped, this.ctx.currentTime, 0.05);
     }
   }
 

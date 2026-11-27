@@ -12,6 +12,8 @@ export type AudioMode = 'song' | 'ensemble' | 'free';
 export interface PreferencesState {
   language: AppLanguage;
   masterVolume: number;
+  musicVolume: number;
+  sfxVolume: number;
   audioMode: AudioMode;
   instrument: InstrumentType;
   infantLock: boolean;
@@ -24,6 +26,8 @@ const STORAGE_KEY = 'valeria_storybook_prefs_v1';
 const DEFAULT_PREFS: PreferencesState = {
   language: 'en',
   masterVolume: 0.85,
+  musicVolume: 0.45,
+  sfxVolume: 0.95,
   audioMode: 'ensemble',
   instrument: 'marimba',
   infantLock: false,
@@ -55,6 +59,14 @@ class AppPreferencesStore {
           typeof parsed.masterVolume === 'number' && !Number.isNaN(parsed.masterVolume)
             ? Math.max(0, Math.min(1, parsed.masterVolume))
             : DEFAULT_PREFS.masterVolume,
+        musicVolume:
+          typeof parsed.musicVolume === 'number' && !Number.isNaN(parsed.musicVolume)
+            ? Math.max(0, Math.min(1, parsed.musicVolume))
+            : DEFAULT_PREFS.musicVolume,
+        sfxVolume:
+          typeof parsed.sfxVolume === 'number' && !Number.isNaN(parsed.sfxVolume)
+            ? Math.max(0, Math.min(1, parsed.sfxVolume))
+            : DEFAULT_PREFS.sfxVolume,
         audioMode:
           parsed.audioMode === 'song' || parsed.audioMode === 'ensemble' || parsed.audioMode === 'free'
             ? parsed.audioMode
