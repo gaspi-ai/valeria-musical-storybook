@@ -43,14 +43,14 @@ export class SpeechHelper {
     }
   }
 
-  public speak(text: string, langOverride?: AppLanguage): void {
+  public speak(text: string, langOverride?: AppLanguage, rateOverride?: number): void {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     const lang = langOverride || appPrefs.get().language;
     try {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = lang === 'fr' ? 'fr-FR' : 'en-US';
-      utter.rate = 0.88;  // Clear, gentle pace for a 1-year-old
+      utter.rate = typeof rateOverride === 'number' ? rateOverride : 0.88; // Clear, gentle pace for a 1-year-old
       utter.pitch = 1.18; // Warm, friendly caregiver tone
       utter.volume = Math.max(0.25, appPrefs.get().masterVolume);
 

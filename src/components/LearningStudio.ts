@@ -16,6 +16,7 @@ import { TouchBurstManager } from './TouchBurstManager';
 import { appPrefs, type AppLanguage } from '../state/AppPreferences';
 import {
   LESSONS_META,
+  WORD_CATEGORIES,
   FIRST_WORDS,
   ANIMAL_FRIENDS,
   COLORS_SHAPES,
@@ -26,6 +27,9 @@ import {
   UI_STRINGS,
   t,
   type LessonId,
+  type LessonCardMeta,
+  type WordCategoryId,
+  type WordItem,
   type BodyPartItem,
 } from '../learning/curriculum';
 import {
@@ -35,6 +39,17 @@ import {
   getBodyBearSvg,
   getEmotionSvg,
 } from '../learning/LessonArt';
+import {
+  createExtraLessonState,
+  renderPeekabooBarn,
+  renderShapeSorter,
+  renderAbcPhonics,
+  renderVehiclesGo,
+  renderOppositesPlay,
+  renderMouthGym,
+  type ExtraLessonContext,
+  type ExtraLessonState,
+} from '../learning/ExtraLessons';
 import { SpeechHelper } from '../learning/SpeechHelper';
 
 export class LearningStudio {
@@ -49,6 +64,8 @@ export class LearningStudio {
   private stageViewEl!: HTMLElement;
   private stageContentEl!: HTMLElement;
   private stageBannerEl!: HTMLElement;
+  private coPlayTipBarEl!: HTMLElement;
+  private showCoPlayTip: boolean = false;
 
   // Discreet Parent Exit (2s hold or double-tap)
   private exitBtn!: HTMLElement;
@@ -63,14 +80,16 @@ export class LearningStudio {
   private activeTimeouts: Set<number> = new Set();
 
   // Per-lesson interactive state
-  private firstWordsPairIdx: number = 0;
-  private firstWordsMode: 'explore' | 'find' = 'explore';
+  private firstWordsCategory: WordCategoryId = 'everyday';
+  private firstWordsIdx: number = 0;
+  private firstWordsMode: 'focus' | 'explore' | 'find' = 'explore';
   private firstWordsTargetId: string = 'ball';
 
   private countingThemeIdx: number = 0;
   private countingCurrent: number = 0;
 
   private emotionIdx: number = 0;
+  private extraState: ExtraLessonState = createExtraLessonState();
 
   constructor(
     container: HTMLElement,
@@ -149,6 +168,10 @@ export class LearningStudio {
           <div class="learning-stage-banner" id="learning-stage-banner"></div>
 
           <div class="learning-stage-controls">
+            <button class="stage-tip-btn" id="stage-tip-btn" aria-label="Parent Co-Play Tip" title="Parent Co-Play Tip">
+              💡
+            </button>
+
             <button class="stage-lang-btn" id="stage-lang-btn" aria-label="Switch Language">
               ${this.lang === 'en' ? '🇬🇧 EN' : '🇫🇷 FR'}
             </button>
@@ -166,6 +189,8 @@ export class LearningStudio {
           </div>
         </div>
 
+        <div class="coplay-tip-bar" id="coplay-tip-bar" style="display: none;"></div>
+
         <div class="learning-stage-content" id="learning-stage-content"></div>
       </div>
     `;
@@ -176,6 +201,7 @@ export class LearningStudio {
     this.stageViewEl = this.element.querySelector('#learning-stage-view') as HTMLElement;
     this.stageContentEl = this.element.querySelector('#learning-stage-content') as HTMLElement;
     this.stageBannerEl = this.element.querySelector('#learning-stage-banner') as HTMLElement;
+    this.coPlayTipBarEl = this.element.querySelector('#coplay-tip-bar') as HTMLElement;
     this.exitBtn = this.element.querySelector('#learning-exit-btn') as HTMLElement;
     this.exitProgressRing = this.exitBtn.querySelector('.exit-ring-progress') as SVGCircleElement;
 
@@ -199,6 +225,7 @@ export class LearningStudio {
     grid.innerHTML = LESSONS_META.map(
       (lesson) => `
       <button class="learning-card" data-lesson-id="${lesson.id}" style="--lesson-color: ${lesson.themeColor}; --lesson-accent: ${lesson.accentColor}">
+        ${lesson.badge ? `<span class="learning-card-badge">${t(lesson.badge, this.lang)}</span>` : ''}
         <div class="learning-card-icon">${lesson.icon}</div>
         <div class="learning-card-title">${t(lesson.title, this.lang)}</div>
         <div class="learning-card-subtitle">${t(lesson.subtitle, this.lang)}</div>
@@ -249,6 +276,15 @@ export class LearningStudio {
         this.engine.playSound('chime.mp3', { volume: 0.65 });
         this.speech.speak(lang === 'fr' ? 'Français !' : 'English!', lang);
       });
+    });
+
+    // Stage Parent Co-Play Tip toggle
+    const tipBtn = this.element.querySelector('#stage-tip-btn') as HTMLElement;
+    tipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showCoPlayTip = !this.showCoPlayTip;
+      this.updateCoPlayTip();
+      this.engine.playSound('woodblock.mp3', { volume: 0.55 });
     });
 
     // Stage quick language toggle
@@ -328,8 +364,9 @@ export class LearningStudio {
   private preloadLessonAudio(): void {
     const sounds = [
       'chime.mp3', 'boing.mp3', 'laugh.mp3', 'squeak.mp3', 'woodblock.mp3',
-      'fanfare.mp3', 'horn_car.mp3', 'bubbles.mp3', 'snore.mp3',
-      'cow.mp3', 'dog.mp3', 'meow.mp3', 'duck.mp3', 'sheep.mp3', 'monkey.mp3',
+      'fanfare.mp3', 'horn_car.mp3', 'horn_bulb.mp3', 'door_bell.mp3',
+      'bubbles.mp3', 'snore.mp3', 'splash.mp3', 'rain.mp3', 'slide_whistle.mp3', 'crystal_ping.mp3',
+      'cow.mp3', 'dog.mp3', 'meow.mp3', 'duck.mp3', 'sheep.mp3', 'monkey.mp3', 'elephant.mp3', 'cuckoo.mp3',
       'marimba_C4.mp3', 'marimba_D4.mp3', 'marimba_E4.mp3', 'marimba_G4.mp3', 'marimba_A4.mp3',
       'glock_C5.mp3', 'glock_D5.mp3', 'glock_E5.mp3', 'glock_G5.mp3', 'glock_A5.mp3', 'glock_C6.mp3',
     ];
@@ -338,19 +375,52 @@ export class LearningStudio {
     }
   }
 
+  private getLessonMeta(id: LessonId): LessonCardMeta {
+    return LESSONS_META.find((l) => l.id === id) || LESSONS_META[0];
+  }
+
+  private updateCoPlayTip(): void {
+    const tipBtn = this.element.querySelector('#stage-tip-btn');
+    tipBtn?.classList.toggle('active', this.showCoPlayTip);
+    if (!this.activeLesson || !this.showCoPlayTip) {
+      this.coPlayTipBarEl.style.display = 'none';
+      return;
+    }
+    const meta = this.getLessonMeta(this.activeLesson);
+    this.coPlayTipBarEl.style.display = 'block';
+    this.coPlayTipBarEl.textContent = `💡 ${t(meta.coPlayTip, this.lang)}`;
+  }
+
+  private getExtraContext(): ExtraLessonContext {
+    return {
+      stageViewEl: this.stageViewEl,
+      stageContentEl: this.stageContentEl,
+      stageBannerEl: this.stageBannerEl,
+      lang: this.lang,
+      engine: this.engine,
+      speech: this.speech,
+      bursts: this.bursts,
+      safeTimeout: (fn, ms) => this.safeTimeout(fn, ms),
+    };
+  }
+
   public openLesson(lessonId: LessonId): void {
     this.clearTimeouts();
     this.speech.stop();
     this.activeLesson = lessonId;
+    this.showCoPlayTip = false;
     this.hubViewEl.style.display = 'none';
     this.stageViewEl.style.display = 'flex';
 
     // Reset lesson-specific states cleanly
-    this.firstWordsPairIdx = 0;
+    this.firstWordsCategory = 'everyday';
+    this.firstWordsIdx = 0;
     this.firstWordsMode = 'explore';
     this.countingCurrent = 0;
     this.emotionIdx = 0;
+    this.extraState = createExtraLessonState();
 
+    this.updateCoPlayTip();
     this.renderActiveLesson();
   }
 
@@ -358,6 +428,8 @@ export class LearningStudio {
     this.clearTimeouts();
     this.speech.stop();
     this.activeLesson = null;
+    this.showCoPlayTip = false;
+    this.coPlayTipBarEl.style.display = 'none';
     this.stageContentEl.innerHTML = '';
     this.stageViewEl.style.background = '';
     this.stageViewEl.style.display = 'none';
@@ -368,21 +440,40 @@ export class LearningStudio {
 
   private renderActiveLesson(): void {
     if (!this.activeLesson) return;
+    this.updateCoPlayTip();
     switch (this.activeLesson) {
       case 'first_words':
         this.renderFirstWordsLesson();
         break;
+      case 'peekaboo_barn':
+        renderPeekabooBarn(this.getExtraContext(), this.extraState);
+        break;
       case 'animal_friends':
         this.renderAnimalFriendsLesson();
         break;
+      case 'shape_sorter':
+        renderShapeSorter(this.getExtraContext(), this.extraState);
+        break;
       case 'colors_shapes':
         this.renderColorsShapesLesson();
+        break;
+      case 'abc_phonics':
+        renderAbcPhonics(this.getExtraContext(), this.extraState);
+        break;
+      case 'vehicles_go':
+        renderVehiclesGo(this.getExtraContext());
         break;
       case 'body_parts':
         this.renderBodyPartsLesson();
         break;
       case 'counting_1_5':
         this.renderCountingLesson();
+        break;
+      case 'opposites_play':
+        renderOppositesPlay(this.getExtraContext(), this.extraState);
+        break;
+      case 'mouth_gym':
+        renderMouthGym(this.getExtraContext(), this.extraState);
         break;
       case 'emotions':
         this.renderEmotionsLesson();
@@ -391,26 +482,38 @@ export class LearningStudio {
   }
 
   // =========================================================================
-  // LESSON 1: FIRST WORDS (Explore + Gentle Zero-Failure "Find It!")
+  // LESSON 1: FIRST WORDS (24 Words, 4 Categories, 1-Card Focus + Explore + Find It!)
   // =========================================================================
+  private renderWordArt(word: WordItem): string {
+    if (word.emoji) {
+      return `<div class="word-emoji-art" aria-hidden="true">${word.emoji}</div>`;
+    }
+    return getWordSvg(word.id);
+  }
+
   private renderFirstWordsLesson(): void {
     this.stageViewEl.style.background = 'linear-gradient(160deg, #FFF5F5 0%, #FFE3E3 100%)';
 
-    const idxA = (this.firstWordsPairIdx * 2) % FIRST_WORDS.length;
-    const idxB = (idxA + 1) % FIRST_WORDS.length;
-    const pair = [FIRST_WORDS[idxA], FIRST_WORDS[idxB]];
+    const catWords = FIRST_WORDS.filter((w) => w.category === this.firstWordsCategory);
+    const safeWords = catWords.length > 0 ? catWords : FIRST_WORDS;
 
-    if (this.firstWordsMode === 'find') {
-      const target = pair[Math.random() > 0.5 ? 0 : 1];
-      this.firstWordsTargetId = target.id;
-      this.stageBannerEl.textContent = `🔍 ${t(target.findPrompt, this.lang)}`;
-      this.safeTimeout(() => this.speech.speak(t(target.findPrompt, this.lang)), 220);
-    } else {
-      this.stageBannerEl.textContent = `🍎 ${t(LESSONS_META[0].title, this.lang)}`;
-    }
+    const categoryTabsHtml = `
+      <div class="fw-cat-row">
+        ${WORD_CATEGORIES.map(
+          (c) => `
+          <button class="fw-cat-pill ${c.id === this.firstWordsCategory ? 'active' : ''}" data-cat-id="${c.id}">
+            ${c.icon} ${t(c.label, this.lang)}
+          </button>
+        `
+        ).join('')}
+      </div>
+    `;
 
-    this.stageContentEl.innerHTML = `
+    const modeTabsHtml = `
       <div class="fw-mode-row">
+        <button class="fw-mode-pill ${this.firstWordsMode === 'focus' ? 'active' : ''}" data-mode="focus">
+          🃏 ${t(UI_STRINGS.focusMode, this.lang)}
+        </button>
         <button class="fw-mode-pill ${this.firstWordsMode === 'explore' ? 'active' : ''}" data-mode="explore">
           ✨ ${t(UI_STRINGS.exploreMode, this.lang)}
         </button>
@@ -418,13 +521,88 @@ export class LearningStudio {
           🔍 ${t(UI_STRINGS.findMode, this.lang)}
         </button>
       </div>
+    `;
+
+    // MODE A: Calm 1-Card Flashcard Focus (Their First Words style)
+    if (this.firstWordsMode === 'focus') {
+      const word = safeWords[this.firstWordsIdx % safeWords.length];
+      this.stageBannerEl.textContent = `🃏 ${t(word.label, this.lang)}`;
+
+      this.stageContentEl.innerHTML = `
+        ${categoryTabsHtml}
+        ${modeTabsHtml}
+
+        <button class="giant-word-card focus-single-card" id="fw-focus-card" data-word-id="${word.id}" style="--card-accent: ${word.color}">
+          <div class="word-art-wrap focus-art">${this.renderWordArt(word)}</div>
+          <div class="word-label focus-label">${t(word.label, this.lang)}</div>
+        </button>
+
+        <div class="fw-focus-controls">
+          <button class="mouth-pill-btn slow-btn" id="fw-slow-btn">${t(UI_STRINGS.hearSlow, this.lang)}</button>
+          <button class="lesson-next-btn" id="fw-next-btn">${t(UI_STRINGS.next, this.lang)}</button>
+        </div>
+      `;
+
+      const speakWord = (slow: boolean, x: number, y: number) => {
+        const cardEl = this.stageContentEl.querySelector('#fw-focus-card') as HTMLElement | null;
+        if (cardEl) {
+          cardEl.classList.remove('pop-bounce');
+          void cardEl.offsetWidth;
+          cardEl.classList.add('pop-bounce');
+        }
+        this.engine.playSound(word.sfx, { volume: 0.8 });
+        this.bursts.spawnBurst(x, y, 14, word.color);
+        this.speech.recordInteraction('first_words', t(word.label, this.lang));
+        this.safeTimeout(() => {
+          this.speech.speak(slow ? t(word.label, this.lang) : t(word.spoken, this.lang), this.lang, slow ? 0.68 : 0.85);
+        }, 140);
+      };
+
+      this.stageContentEl.querySelector('#fw-focus-card')?.addEventListener('pointerdown', (e) => {
+        const pe = e as PointerEvent;
+        e.stopPropagation();
+        speakWord(false, pe.clientX, pe.clientY);
+      });
+      this.stageContentEl.querySelector('#fw-slow-btn')?.addEventListener('pointerdown', (e) => {
+        const pe = e as PointerEvent;
+        e.stopPropagation();
+        speakWord(true, pe.clientX, pe.clientY);
+      });
+      this.stageContentEl.querySelector('#fw-next-btn')?.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        this.firstWordsIdx = (this.firstWordsIdx + 1) % safeWords.length;
+        this.engine.playSound('chime.mp3', { volume: 0.7 });
+        this.renderFirstWordsLesson();
+      });
+
+      this.bindFirstWordsTabs();
+      return;
+    }
+
+    // MODE B & C: 2-Card Explore or Find It!
+    const idxA = (this.firstWordsIdx * 2) % safeWords.length;
+    const idxB = (idxA + 1) % safeWords.length;
+    const pair = [safeWords[idxA], safeWords[idxB]];
+
+    if (this.firstWordsMode === 'find') {
+      const target = pair[Math.random() > 0.5 ? 0 : 1];
+      this.firstWordsTargetId = target.id;
+      this.stageBannerEl.textContent = `🔍 ${t(target.findPrompt, this.lang)}`;
+      this.safeTimeout(() => this.speech.speak(t(target.findPrompt, this.lang)), 220);
+    } else {
+      this.stageBannerEl.textContent = `🍎 ${t(this.getLessonMeta('first_words').title, this.lang)}`;
+    }
+
+    this.stageContentEl.innerHTML = `
+      ${categoryTabsHtml}
+      ${modeTabsHtml}
 
       <div class="fw-cards-pair">
         ${pair
           .map(
             (w) => `
           <button class="giant-word-card" data-word-id="${w.id}" style="--card-accent: ${w.color}">
-            <div class="word-art-wrap">${getWordSvg(w.id)}</div>
+            <div class="word-art-wrap">${this.renderWordArt(w)}</div>
             <div class="word-label">${t(w.label, this.lang)}</div>
           </button>
         `
@@ -435,20 +613,12 @@ export class LearningStudio {
       <button class="lesson-next-btn" id="fw-next-btn">${t(UI_STRINGS.next, this.lang)}</button>
     `;
 
-    // Mode switch
-    this.stageContentEl.querySelectorAll('.fw-mode-pill').forEach((btn) => {
-      btn.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-        this.firstWordsMode = btn.getAttribute('data-mode') === 'find' ? 'find' : 'explore';
-        this.engine.playSound('woodblock.mp3', { volume: 0.7 });
-        this.renderFirstWordsLesson();
-      });
-    });
+    this.bindFirstWordsTabs();
 
     // Next pair
     this.stageContentEl.querySelector('#fw-next-btn')?.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
-      this.firstWordsPairIdx = (this.firstWordsPairIdx + 1) % Math.ceil(FIRST_WORDS.length / 2);
+      this.firstWordsIdx = (this.firstWordsIdx + 1) % Math.ceil(safeWords.length / 2);
       this.engine.playSound('chime.mp3', { volume: 0.7 });
       this.renderFirstWordsLesson();
     });
@@ -479,11 +649,10 @@ export class LearningStudio {
               confetti({ particleCount: 40, spread: 65, origin: { y: 0.65 } });
             }
             this.safeTimeout(() => {
-              this.firstWordsPairIdx = (this.firstWordsPairIdx + 1) % Math.ceil(FIRST_WORDS.length / 2);
+              this.firstWordsIdx = (this.firstWordsIdx + 1) % Math.ceil(safeWords.length / 2);
               this.renderFirstWordsLesson();
             }, 1800);
           } else {
-            // Zero-failure gentle guidance: name tapped item, gently glow & wiggle the target!
             const targetWord = pair.find((w) => w.id === this.firstWordsTargetId)!;
             this.speech.speak(`${t(word.label, this.lang)}! ${t(targetWord.findPrompt, this.lang)}`);
             const targetEl = this.stageContentEl.querySelector(`[data-word-id="${this.firstWordsTargetId}"]`);
@@ -498,12 +667,37 @@ export class LearningStudio {
     });
   }
 
+  private bindFirstWordsTabs(): void {
+    this.stageContentEl.querySelectorAll('.fw-cat-pill').forEach((btn) => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        const cat = btn.getAttribute('data-cat-id') as WordCategoryId;
+        if (!cat) return;
+        this.firstWordsCategory = cat;
+        this.firstWordsIdx = 0;
+        this.engine.playSound('woodblock.mp3', { volume: 0.65 });
+        this.renderFirstWordsLesson();
+      });
+    });
+
+    this.stageContentEl.querySelectorAll('.fw-mode-pill').forEach((btn) => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        const m = btn.getAttribute('data-mode');
+        this.firstWordsMode = m === 'find' ? 'find' : m === 'focus' ? 'focus' : 'explore';
+        this.firstWordsIdx = 0;
+        this.engine.playSound('woodblock.mp3', { volume: 0.7 });
+        this.renderFirstWordsLesson();
+      });
+    });
+  }
+
   // =========================================================================
   // LESSON 2: ANIMAL FRIENDS & SOUNDS (Look -> Tap -> Hear -> Imitate)
   // =========================================================================
   private renderAnimalFriendsLesson(): void {
     this.stageViewEl.style.background = 'linear-gradient(160deg, #E8F8EE 0%, #B7E4C7 100%)';
-    this.stageBannerEl.textContent = `🐮 ${t(LESSONS_META[1].title, this.lang)}`;
+    this.stageBannerEl.textContent = `🐮 ${t(this.getLessonMeta('animal_friends').title, this.lang)}`;
 
     this.stageContentEl.innerHTML = `
       <div class="animal-grid-6">
@@ -550,7 +744,7 @@ export class LearningStudio {
   // =========================================================================
   private renderColorsShapesLesson(): void {
     this.stageViewEl.style.background = 'linear-gradient(160deg, #FFFDF0 0%, #FFF3B0 100%)';
-    this.stageBannerEl.textContent = `⭐ ${t(LESSONS_META[2].title, this.lang)}`;
+    this.stageBannerEl.textContent = `⭐ ${t(this.getLessonMeta('colors_shapes').title, this.lang)}`;
 
     this.stageContentEl.innerHTML = `
       <div class="shapes-grid-6">
