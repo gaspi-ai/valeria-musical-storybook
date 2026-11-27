@@ -8,6 +8,7 @@
 
 import { AudioEngine } from '../audio/AudioEngine';
 import { appPrefs } from '../state/AppPreferences';
+import { LESSONS_META } from '../learning/curriculum';
 import type { StorybookScene } from '../scenes/SceneManager';
 
 export interface ShelfCallbacks {
@@ -58,7 +59,7 @@ export class StorybookShelf {
             <span class="feat-icon">🎓</span>
             <div class="feat-text">
               <strong>${isFr ? 'Atelier Petit Explorateur' : 'Little Learner Studio'}</strong>
-              <span>${isFr ? '6 leçons (EN / FR)' : '6 Gentle 1-Year-Old Lessons'}</span>
+              <span>${isFr ? `${LESSONS_META.length} leçons (EN / FR)` : `${LESSONS_META.length} Gentle 1-Year-Old Lessons`}</span>
             </div>
           </button>
 

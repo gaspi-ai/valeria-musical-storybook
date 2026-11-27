@@ -163,8 +163,16 @@ export abstract class BaseGameScene implements StorybookScene {
     this.isActive = true;
     this.element.style.display = 'flex';
     this.updateMusicButton();
-    // Lazy-load only this scene's crisp SFX
-    for (const asset of this.getPreloadAssets()) {
+    // Eagerly preload this scene's SFX + core UI sounds so the very first tap plays immediately
+    const toPreload = new Set([
+      'chime.mp3',
+      'boing.mp3',
+      'woodblock.mp3',
+      'fanfare.mp3',
+      'bubbles.mp3',
+      ...this.getPreloadAssets(),
+    ]);
+    for (const asset of toPreload) {
       this.engine.loadBuffer(asset).catch(() => {});
     }
     this.onActivate();

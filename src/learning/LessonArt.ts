@@ -4,6 +4,9 @@
  * Zero dependency on inconsistent OS emojis — renders crisply on iPhone & iPad Retina screens.
  */
 
+import type { AppLanguage } from '../state/AppPreferences';
+import { BODY_PARTS } from './curriculum';
+
 export function getWordSvg(id: string): string {
   switch (id) {
     case 'ball':
@@ -218,11 +221,16 @@ export function getShapeSvg(shape: string, fill: string, stroke: string): string
 
 /**
  * Interactive Baby Bear with oversized tappable body parts for Lesson 4 (My Body Parts).
+ * Uses localized EN / FR aria-labels for full bilingual accessibility.
  */
-export function getBodyBearSvg(): string {
-  return `<svg viewBox="0 0 320 380" class="body-bear-svg" aria-label="Friendly Baby Bear">
+export function getBodyBearSvg(lang: AppLanguage = 'en'): string {
+  const lbl = (id: keyof typeof BODY_PARTS) =>
+    lang === 'fr' ? BODY_PARTS[id].label.fr : BODY_PARTS[id].label.en;
+  const bearLabel = lang === 'fr' ? 'Petit Ours Gentil' : 'Friendly Baby Bear';
+
+  return `<svg viewBox="0 0 320 380" class="body-bear-svg" aria-label="${bearLabel}">
     <!-- Ears (tappable) -->
-    <g class="body-part-zone" data-part="ears" role="button" aria-label="Ears">
+    <g class="body-part-zone" data-part="ears" role="button" aria-label="${lbl('ears')}">
       <circle cx="88" cy="76" r="34" fill="#C68642" stroke="#8D5524" stroke-width="7"/>
       <circle cx="88" cy="76" r="18" fill="#FFB3C1"/>
       <circle cx="232" cy="76" r="34" fill="#C68642" stroke="#8D5524" stroke-width="7"/>
@@ -230,13 +238,13 @@ export function getBodyBearSvg(): string {
     </g>
 
     <!-- Torso & Belly (tappable) -->
-    <g class="body-part-zone" data-part="belly" role="button" aria-label="Belly">
+    <g class="body-part-zone" data-part="belly" role="button" aria-label="${lbl('belly')}">
       <ellipse cx="160" cy="256" rx="84" ry="86" fill="#C68642" stroke="#8D5524" stroke-width="7"/>
       <ellipse cx="160" cy="264" rx="54" ry="56" fill="#FDE2C4"/>
     </g>
 
     <!-- Arms / Hands (tappable) -->
-    <g class="body-part-zone" data-part="hands" role="button" aria-label="Hands">
+    <g class="body-part-zone" data-part="hands" role="button" aria-label="${lbl('hands')}">
       <ellipse cx="64" cy="236" rx="34" ry="24" fill="#C68642" stroke="#8D5524" stroke-width="7" transform="rotate(-25 64 236)"/>
       <circle cx="48" cy="242" r="12" fill="#FFB3C1"/>
       <ellipse cx="256" cy="236" rx="34" ry="24" fill="#C68642" stroke="#8D5524" stroke-width="7" transform="rotate(25 256 236)"/>
@@ -244,7 +252,7 @@ export function getBodyBearSvg(): string {
     </g>
 
     <!-- Feet (tappable) -->
-    <g class="body-part-zone" data-part="feet" role="button" aria-label="Feet">
+    <g class="body-part-zone" data-part="feet" role="button" aria-label="${lbl('feet')}">
       <ellipse cx="106" cy="340" rx="34" ry="24" fill="#C68642" stroke="#8D5524" stroke-width="7"/>
       <ellipse cx="106" cy="340" rx="18" ry="12" fill="#FFB3C1"/>
       <ellipse cx="214" cy="340" rx="34" ry="24" fill="#C68642" stroke="#8D5524" stroke-width="7"/>
@@ -258,7 +266,7 @@ export function getBodyBearSvg(): string {
     <circle cx="208" cy="148" r="12" fill="#FF758F" opacity="0.45"/>
 
     <!-- Eyes (tappable) -->
-    <g class="body-part-zone" data-part="eyes" role="button" aria-label="Eyes">
+    <g class="body-part-zone" data-part="eyes" role="button" aria-label="${lbl('eyes')}">
       <circle cx="128" cy="120" r="20" fill="transparent"/>
       <circle cx="192" cy="120" r="20" fill="transparent"/>
       <ellipse cx="128" cy="120" rx="11" ry="14" fill="#1D3557"/>
@@ -268,14 +276,14 @@ export function getBodyBearSvg(): string {
     </g>
 
     <!-- Nose (tappable) -->
-    <g class="body-part-zone" data-part="nose" role="button" aria-label="Nose">
+    <g class="body-part-zone" data-part="nose" role="button" aria-label="${lbl('nose')}">
       <circle cx="160" cy="146" r="22" fill="transparent"/>
       <ellipse cx="160" cy="146" rx="16" ry="12" fill="#3D2B1F"/>
       <ellipse cx="155" cy="142" rx="5" ry="3" fill="#FFFFFF" opacity="0.5"/>
     </g>
 
     <!-- Mouth (tappable) -->
-    <g class="body-part-zone" data-part="mouth" role="button" aria-label="Mouth">
+    <g class="body-part-zone" data-part="mouth" role="button" aria-label="${lbl('mouth')}">
       <circle cx="160" cy="172" r="22" fill="transparent"/>
       <path d="M 138 166 Q 160 188 182 166" fill="none" stroke="#3D2B1F" stroke-width="6" stroke-linecap="round"/>
     </g>

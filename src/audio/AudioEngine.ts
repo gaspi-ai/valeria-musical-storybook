@@ -225,7 +225,9 @@ export class AudioEngine {
   }
 
   /**
-   * Resolves audio path respecting Vite's base URL and GitHub CDN endpoints.
+   * Idempotently resolves any local audio path respecting Vite's BASE_URL (both './' and sub-paths
+   * like '/valeria-musical-storybook/'). Guarantees resolveAudioPath(resolveAudioPath(x)) === resolveAudioPath(x)
+   * so cached keys and network URLs never double-prefix 'audio/' or the repo sub-path.
    */
   public resolveAudioPath(path: string): string {
     if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -233,7 +235,17 @@ export class AudioEngine {
     }
     const rawBase = import.meta.env.BASE_URL || './';
     const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
-    const clean = path.replace(/^\/+/, '');
+    const baseTail = base.replace(/^\.?\//, '').replace(/^\/+/, '');
+
+    let clean = path.trim().replace(/^\.?\//, '').replace(/^\/+/, '');
+    // Strip repeated baseTail prefixes (e.g. 'valeria-musical-storybook/')
+    while (baseTail && clean.startsWith(baseTail)) {
+      clean = clean.slice(baseTail.length).replace(/^\/+/, '');
+    }
+    // Strip accidental repeated 'audio/audio/' prefixes
+    while (clean.startsWith('audio/audio/')) {
+      clean = clean.slice('audio/'.length);
+    }
     const withAudio = clean.startsWith('audio/') ? clean : `audio/${clean}`;
     return `${base}${withAudio}`;
   }
@@ -314,28 +326,9 @@ export class AudioEngine {
     return promise;
   }
 
-  private getGitHubCDNFallback(name: string): string | null {
-    const clean = name.replace(/^.*[\\/]/, '');
-    const celloMatch = clean.match(/^cello_([A-G][s#b]?[0-8])\.mp3$/i);
-    if (celloMatch) {
-      return `https://nbrosowsky.github.io/tonejs-instruments/samples/cello/${celloMatch[1]}.mp3`;
-    }
-    const harpMatch = clean.match(/^harp(?:_tone)?_([A-G][s#b]?[0-8])\.mp3$/i);
-    if (harpMatch) {
-      return `https://nbrosowsky.github.io/tonejs-instruments/samples/harp/${harpMatch[1]}.mp3`;
-    }
-    if (clean === 'acoustic_kick.mp3') {
-      return 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/kick.mp3';
-    }
-    if (clean === 'acoustic_snare.mp3') {
-      return 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/snare.mp3';
-    }
-    if (clean === 'acoustic_hihat.mp3') {
-      return 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/hihat.mp3';
-    }
-    if (clean === 'acoustic_shaker.mp3' || clean === 'acoustic_egg_shaker.mp3') {
-      return 'https://tonejs.github.io/audio/berklee/shaker1.mp3';
-    }
+  private getGitHubCDNFallback(_name: string): string | null {
+    // All required studio samples are bundled locally in public/audio/.
+    // External CDN fallbacks (e.g. nbrosowsky.github.io) 404 on several notes and are no longer needed.
     return null;
   }
 
@@ -618,8 +611,7 @@ export class AudioEngine {
       return this.playSound(bestUrl, { ...options, pitch: (options.pitch || 1.0) * ratio });
     }
 
-    // Trigger load and synthesize fallback
-    this.loadBuffer(`https://nbrosowsky.github.io/tonejs-instruments/samples/cello/${note}.mp3`);
+    // Local sample preload (no broken external CDN)
     return this.playSound(url, options);
   }
 

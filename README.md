@@ -25,7 +25,10 @@ Play the app online on any phone, tablet, iPad, or computer:
 - **Master Dynamics Compressor:** Prevents audio distortion or speaker clipping from enthusiastic toddler multi-touch slaps.
 - **Dynamic Multi-Track Stem Control:** Spinning wheels adjusts the engine rumble pitch and rhythm tempo; tapping the grille sounds the brass horn.
 
-### 3. Interactive Scenes (9 Storybook Worlds)
+### 3. Interactive Musical Games (13 Storybook Worlds) + Bilingual Learning Studio (12 Lessons) & Songs Theater (6 Songs)
+- **13 Interactive Musical Games**: *Wheels on the Bus*, *Old MacDonald's Farm*, *Itsy Bitsy Spider*, *Twinkle Little Star*, *Row Your Boat*, *Rainbow Xylophone*, *Magic Bubble Pop*, *Hatch Surprise Eggs*, *Peek-a-Boo Boxes*, *Balloons & Fruit Smash*, *Baby Toy Phone* (0–9 keypad + Animal Calls + Call Mama/Dada), *Drums & Baby Piano Room*, and *Multi-Touch Fireworks Show*.
+- **12 Bilingual (EN / FR) Infant Learning Lessons**: *First Words* (24 words, 4 categories, 3 modes), *Peekaboo Barn*, *Montessori Shape Sorter*, *Baby Sound Mirror*, *ABC Letter Blocks*, *Things That Go!*, *Big & Small Opposites*, *Animal Sounds*, *Colors & Shapes*, *My Body Parts*, *Count 1 to 5*, and *Happy & Silly Emotions* — powered by 268 studio human neural voice clips.
+- **6 Interactive Songs Theater Sing-Alongs**: Fullscreen animated sing-along stage with tappable actors.
 
 #### Scene 1: "Wheels on the Bus" (Mechanical Cause & Effect)
 - **Rotatable Wheels:** Spinning wheels with momentum physics drive the parallax countryside and modulate the diesel engine sound.

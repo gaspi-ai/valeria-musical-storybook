@@ -815,7 +815,7 @@ export class LearningStudio {
     this.stageContentEl.innerHTML = `
       <div class="body-bear-stage">
         <div class="body-bear-wrap" id="body-bear-wrap">
-          ${getBodyBearSvg()}
+          ${getBodyBearSvg(this.lang)}
         </div>
         <div class="body-part-pills">
           ${(Object.keys(BODY_PARTS) as BodyPartItem['id'][]).map((partId) => {

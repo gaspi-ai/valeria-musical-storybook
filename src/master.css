@@ -93,11 +93,45 @@ body.bedtime-mode .meadow-butterfly {
     height: 38px;
     padding: 0 10px;
     font-size: 0.74rem;
+    flex-shrink: 0;
   }
   .nav-pill-shelf {
     width: 38px;
+    min-width: 38px;
     padding: 0;
     font-size: 1.05rem;
+  }
+}
+
+/* Ultra-narrow phones (320px - 360px, e.g. iPhone SE 1st gen): zero overlap with LOCK/HOLD */
+@media (max-width: 365px) {
+  .top-nav-pills {
+    left: calc(6px + var(--safe-left));
+    gap: 4px;
+    max-width: calc(100vw - 102px);
+  }
+  .nav-pill {
+    height: 40px;
+    padding: 0 7px;
+    font-size: 0.66rem;
+    gap: 3px;
+    border-width: 2px;
+    flex-shrink: 0;
+  }
+  .nav-pill-shelf {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    font-size: 1rem;
+  }
+  .parent-controls-wrap {
+    right: calc(6px + var(--safe-right)) !important;
+    gap: 5px !important;
+  }
+  .quick-infant-lock-btn,
+  .parent-gate-btn {
+    width: 42px !important;
+    height: 42px !important;
   }
 }
 

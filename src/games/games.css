@@ -634,3 +634,89 @@
   color: #1D3557;
 }
 
+
+
+/* ==========================================================================
+   LANDSCAPE PHONE SAFETY (844x390, 667x375, 568x320)
+   Guarantees ZERO overlap between stage controls and bottom music toggle pill
+   ========================================================================== */
+@media (max-height: 500px) {
+  .pro-game-scene {
+    padding-top: calc(54px + var(--safe-top));
+    padding-bottom: calc(6px + var(--safe-bottom));
+  }
+
+  .pro-game-stage {
+    overflow: hidden;
+    justify-content: center;
+  }
+
+  .pro-game-music-bar {
+    padding-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .pro-music-toggle-btn {
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    gap: 6px;
+    border-width: 2px;
+  }
+
+  /* Wheels on the Bus landscape fit */
+  .pro-sky-sun {
+    width: 48px;
+    height: 48px;
+  }
+
+  .pro-bus-wrap {
+    width: min(78vw, 440px);
+    margin-top: 0;
+    gap: 6px;
+  }
+
+  .pro-bus-svg {
+    max-height: 38dvh;
+    width: auto;
+    max-width: 100%;
+  }
+
+  .pro-bus-actions {
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+
+  .pro-toy-pill {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+    min-height: 34px;
+    white-space: nowrap;
+  }
+
+  /* Old MacDonald / Farm / Eggs / Peekaboo Boxes / Spider / Row Boat / Xylophone */
+  .pro-farm-grid,
+  .pro-eggs-grid,
+  .pro-boxes-grid {
+    gap: 8px;
+    max-height: 62dvh;
+  }
+
+  .pro-farm-card,
+  .pro-egg-card,
+  .pro-box-card {
+    min-height: 82px !important;
+    padding: 8px 6px !important;
+  }
+
+  .pro-spider-svg,
+  .pro-boat-svg {
+    max-height: 48dvh;
+    width: auto;
+  }
+
+  .pro-xylo-bars {
+    height: 46dvh;
+    max-height: 185px;
+  }
+}

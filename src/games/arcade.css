@@ -374,3 +374,82 @@
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
   transition: opacity 0.5s ease;
 }
+
+
+/* Landscape Phone Safety for Arcade Games (844x390, 667x375, 568x320) */
+@media (max-height: 500px) {
+  .baby-phone-shell {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    grid-template-rows: auto 1fr;
+    align-items: center;
+    gap: 8px 12px;
+    width: min(94vw, 620px);
+    max-width: 620px;
+    max-height: 100%;
+    padding: 8px 12px;
+    border-radius: 22px;
+  }
+
+  .phone-screen {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 52px;
+    padding: 6px 10px;
+    border-radius: 14px;
+  }
+
+  .phone-contacts-row {
+    grid-column: 1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    width: 100%;
+  }
+
+  .phone-contact-btn {
+    padding: 5px 4px;
+    font-size: 0.68rem;
+    min-height: 42px;
+  }
+
+  .phone-keypad {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    gap: 5px;
+  }
+
+  .phone-key-btn {
+    min-height: 34px;
+    height: 40px;
+    font-size: 0.95rem;
+    padding: 2px;
+    border-radius: 12px;
+  }
+
+  .drum-kit-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .drum-pad {
+    min-height: 96px;
+    padding: 8px 6px;
+  }
+
+  .piano-keys-row {
+    height: 46dvh;
+    max-height: 170px;
+  }
+
+  .fruit-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .fruit-card {
+    min-height: 76px;
+    padding: 6px;
+  }
+}

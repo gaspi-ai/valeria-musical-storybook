@@ -34,6 +34,21 @@ export class SpeechHelper {
   private cachedVoices: SpeechSynthesisVoice[] = [];
   private pendingTimer: number | null = null;
 
+  // Map short scene/contact voice keys to their generated studio MP3 filenames
+  private static readonly VOICE_KEY_ALIASES: Record<string, string> = {
+    cow: 'animal_cow',
+    dog: 'animal_dog',
+    cat: 'animal_cat',
+    duck: 'animal_duck',
+    monkey: 'animal_monkey',
+    sheep: 'animal_sheep',
+    mama: 'fw_mama',
+    call_mama: 'fw_mama',
+    dada: 'fw_dada',
+    call_dada: 'fw_dada',
+    great_job: 'ui_yay',
+  };
+
   private constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.refreshVoices();
@@ -87,17 +102,19 @@ export class SpeechHelper {
       const lang = opts.lang || appPrefs.get().language;
 
       // 1. Custom Parent Voice recording takes #1 priority if Mom/Dad recorded it
-      if (opts.parentKey) {
+      const parentLookupKey = opts.parentKey || voiceKey;
+      if (parentLookupKey) {
         const store = ParentVoiceStore.getInstance();
-        if (store.hasClip(opts.parentKey)) {
+        if (store.hasClip(parentLookupKey)) {
           engine.duckMusic(2200);
-          const played = await store.playClip(opts.parentKey);
+          const played = await store.playClip(parentLookupKey);
           if (played) return;
         }
       }
 
-      // 2. Real Studio Human Neural Voice MP3
-      const clipPath = `voices/${lang}/${voiceKey}.mp3`;
+      // 2. Real Studio Human Neural Voice MP3 (with alias mapping for scene/contact keys)
+      const resolvedKey = SpeechHelper.VOICE_KEY_ALIASES[voiceKey] || voiceKey;
+      const clipPath = `voices/${lang}/${resolvedKey}.mp3`;
       const rate = opts.slow ? 0.80 : 1.0;
       const playedStudio = await engine.playVoiceClip(clipPath, { rate, volume: 1.0 });
       if (playedStudio) return;
